@@ -1,0 +1,38 @@
+{# Hérite de la mise en page commune définie dans base.html #}
+{% extends "base.html" %}
+{# Définit le titre de la page affiché dans l'onglet du navigateur #}
+{% block titre %}Créer un compte{% endblock %}
+
+{# Remplit le bloc "contenu" déclaré dans base.html #}
+{% block contenu %}
+{# Conteneur en forme de carte qui regroupe le formulaire #}
+<div class="carte">
+    {# Titre principal de la page #}
+    <h1>Créer un compte</h1>
+    {# Formulaire envoyé en POST à la même URL (route d'inscription) #}
+    <form method="POST">
+        {# Libellé du champ identifiant #}
+        <label for="login">Identifiant</label>
+        {# Champ texte obligatoire pour choisir un identifiant #}
+        <input type="text" id="login" name="login" required>
+
+        {# Libellé du champ mot de passe #}
+        <label for="mdp">Mot de passe</label>
+        {# Champ mot de passe obligatoire (saisie masquée) #}
+        <input type="password" id="mdp" name="mdp" required>
+
+        {# Libellé du champ de confirmation #}
+        <label for="confirmation">Confirmer le mot de passe</label>
+        {# Champ obligatoire pour retaper le mot de passe #}
+        <input type="password" id="confirmation" name="confirmation" required>
+
+        {# Bouton qui envoie le formulaire #}
+        <button type="submit">S'inscrire</button>
+    {# Fin du formulaire #}
+    </form>
+    {# Lien vers la page de connexion pour ceux qui ont déjà un compte #}
+    <p>Déjà un compte ? <a href="{{ url_for('login') }}">Se connecter</a></p>
+{# Fin de la carte #}
+</div>
+{# Fin du bloc "contenu" #}
+{% endblock %}

@@ -1,0 +1,239 @@
+/* Importe la police Poppins depuis Google Fonts (graisses 400, 500, 600) */
+@import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
+
+/* Variables globales réutilisables dans tout le fichier */
+:root {
+    /* Couleur principale (violet) */
+    --primaire: #6366f1;
+    /* Couleur principale plus foncée (survol) */
+    --primaire-fonce: #4f46e5;
+    /* Couleur du texte principal */
+    --texte: #1f2937;
+    /* Couleur du texte secondaire (gris) */
+    --texte-doux: #6b7280;
+    /* Couleur des bordures */
+    --bordure: #e5e7eb;
+    /* Couleur du texte d'erreur (rouge) */
+    --erreur: #dc2626;
+    /* Couleur de fond des messages d'erreur */
+    --erreur-fond: #fef2f2;
+    /* Rayon d'arrondi des coins */
+    --rayon: 12px;
+}
+
+/* Sélectionne tous les éléments */
+* {
+    /* La largeur inclut le padding et la bordure */
+    box-sizing: border-box;
+}
+
+/* Corps de la page */
+body {
+    /* Police Poppins, sinon police sans empattement */
+    font-family: "Poppins", sans-serif;
+    /* Couleur du texte par défaut */
+    color: var(--texte);
+    /* Supprime la marge par défaut du navigateur */
+    margin: 0;
+    /* Occupe au moins toute la hauteur de l'écran */
+    min-height: 100vh;
+    /* Active la mise en page flexbox */
+    display: flex;
+    /* Empile les éléments verticalement */
+    flex-direction: column;
+    /* Centre horizontalement */
+    align-items: center;
+    /* Centre verticalement */
+    justify-content: center;
+    /* Espace intérieur autour du contenu */
+    padding: 1rem;
+    /* Fond en dégradé diagonal bleu-violet */
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+/* Carte centrale */
+.carte {
+    /* Fond blanc */
+    background: #ffffff;
+    /* Prend toute la largeur disponible */
+    width: 100%;
+    /* ... sans dépasser 380px */
+    max-width: 380px;
+    /* Espace intérieur (haut/bas, gauche/droite) */
+    padding: 2.5rem 2rem;
+    /* Coins arrondis */
+    border-radius: var(--rayon);
+    /* Ombre portée douce */
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    /* Animation d'apparition au chargement */
+    animation: apparition 0.4s ease-out;
+}
+
+/* Définition de l'animation d'apparition */
+@keyframes apparition {
+    /* Départ : invisible et décalé de 15px vers le bas */
+    from { opacity: 0; transform: translateY(15px); }
+    /* Arrivée : visible et à sa position normale */
+    to   { opacity: 1; transform: translateY(0); }
+}
+
+/* Titres principaux */
+h1 {
+    /* Marge uniquement en bas */
+    margin: 0 0 1.5rem;
+    /* Taille du texte */
+    font-size: 1.6rem;
+    /* Texte semi-gras */
+    font-weight: 600;
+    /* Texte centré */
+    text-align: center;
+}
+
+/* Formulaire */
+form {
+    /* Active flexbox */
+    display: flex;
+    /* Champs empilés verticalement */
+    flex-direction: column;
+}
+
+/* Libellés des champs */
+label {
+    /* Petite taille de texte */
+    font-size: 0.85rem;
+    /* Graisse moyenne */
+    font-weight: 500;
+    /* Couleur grise */
+    color: var(--texte-doux);
+    /* Petit espace sous le libellé */
+    margin-bottom: 0.35rem;
+}
+
+/* Champs de saisie */
+input {
+    /* Même police que le reste de la page */
+    font-family: inherit;
+    /* Taille du texte saisi */
+    font-size: 0.95rem;
+    /* Espace intérieur */
+    padding: 0.75rem 0.9rem;
+    /* Espace sous chaque champ */
+    margin-bottom: 1.1rem;
+    /* Bordure grise fine */
+    border: 1.5px solid var(--bordure);
+    /* Coins arrondis */
+    border-radius: 8px;
+    /* Supprime le contour par défaut au focus */
+    outline: none;
+    /* Transition douce de la bordure et de l'ombre */
+    transition: border-color 0.2s, box-shadow 0.2s;
+}
+
+/* Champ de saisie sélectionné */
+input:focus {
+    /* Bordure de couleur principale */
+    border-color: var(--primaire);
+    /* Halo violet léger autour du champ */
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
+}
+
+/* Boutons */
+button {
+    /* Même police que le reste de la page */
+    font-family: inherit;
+    /* Taille du texte */
+    font-size: 1rem;
+    /* Graisse moyenne */
+    font-weight: 500;
+    /* Espace intérieur */
+    padding: 0.8rem;
+    /* Petit espace au-dessus */
+    margin-top: 0.4rem;
+    /* Texte blanc */
+    color: #ffffff;
+    /* Fond de couleur principale */
+    background: var(--primaire);
+    /* Pas de bordure */
+    border: none;
+    /* Coins arrondis */
+    border-radius: 8px;
+    /* Curseur en forme de main */
+    cursor: pointer;
+    /* Transition douce du fond et du zoom */
+    transition: background 0.2s, transform 0.1s;
+}
+
+/* Bouton survolé */
+button:hover {
+    /* Fond plus foncé */
+    background: var(--primaire-fonce);
+}
+
+/* Bouton pendant le clic */
+button:active {
+    /* Légère réduction pour un effet d'appui */
+    transform: scale(0.98);
+}
+
+/* Liens et texte secondaire */
+.carte p {
+    /* Espace au-dessus du paragraphe */
+    margin: 1.5rem 0 0;
+    /* Texte plus petit */
+    font-size: 0.9rem;
+    /* Texte centré */
+    text-align: center;
+    /* Couleur grise */
+    color: var(--texte-doux);
+}
+
+/* Liens */
+a {
+    /* Couleur principale */
+    color: var(--primaire);
+    /* Graisse moyenne */
+    font-weight: 500;
+    /* Pas de soulignement */
+    text-decoration: none;
+}
+
+/* Lien survolé */
+a:hover {
+    /* Souligné au survol */
+    text-decoration: underline;
+}
+
+/* Message d'erreur */
+.erreur {
+    /* Prend toute la largeur disponible */
+    width: 100%;
+    /* ... alignée sur la largeur de la carte */
+    max-width: 380px;
+    /* Espace sous le message */
+    margin: 0 0 1rem;
+    /* Espace intérieur */
+    padding: 0.75rem 1rem;
+    /* Texte plus petit */
+    font-size: 0.9rem;
+    /* Texte rouge */
+    color: var(--erreur);
+    /* Fond rouge très clair */
+    background: var(--erreur-fond);
+    /* Barre rouge à gauche */
+    border-left: 4px solid var(--erreur);
+    /* Coins arrondis */
+    border-radius: 8px;
+}
+
+/* Page d'accueil (temporaire) */
+/* Titre placé directement dans le body */
+body > h1 {
+    /* Texte blanc sur le fond dégradé */
+    color: #ffffff;
+}
+
+/* Lien placé directement dans le body */
+body > a {
+    /* Texte blanc sur le fond dégradé */
+    color: #ffffff;
+}

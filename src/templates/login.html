@@ -1,0 +1,33 @@
+{# Hérite de la mise en page commune définie dans base.html #}
+{% extends "base.html" %}
+{# Définit le titre de la page affiché dans l'onglet du navigateur #}
+{% block titre %}Connexion{% endblock %}
+
+{# Remplit le bloc "contenu" déclaré dans base.html #}
+{% block contenu %}
+{# Conteneur en forme de carte qui regroupe le formulaire #}
+<div class="carte">
+    {# Titre principal de la page #}
+    <h1>Connexion</h1>
+    {# Formulaire envoyé en POST à la même URL (route de connexion) #}
+    <form method="POST">
+        {# Libellé du champ identifiant #}
+        <label for="login">Identifiant</label>
+        {# Champ texte obligatoire pour saisir l'identifiant #}
+        <input type="text" id="login" name="login" required>
+
+        {# Libellé du champ mot de passe #}
+        <label for="mdp">Mot de passe</label>
+        {# Champ mot de passe obligatoire (saisie masquée) #}
+        <input type="password" id="mdp" name="mdp" required>
+
+        {# Bouton qui envoie le formulaire #}
+        <button type="submit">Se connecter</button>
+    {# Fin du formulaire #}
+    </form>
+{# Lien vers la page d'inscription pour les utilisateurs sans compte #}
+<p>Pas de compte ? <a href="{{ url_for('inscription') }}">Créer un compte</a></p>
+{# Fin de la carte #}
+</div>
+{# Fin du bloc "contenu" #}
+{% endblock %}

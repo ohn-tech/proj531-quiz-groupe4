@@ -1,0 +1,10 @@
+{# Hérite de la mise en page commune définie dans base.html #}
+{% extends "base.html" %}
+{# Remplit le bloc "contenu" déclaré dans base.html #}
+{% block contenu %}
+{# Titre principal qui salue l'utilisateur connecté par son nom #}
+<h1>Bienvenue {{ utilisateur }}</h1>
+{# Lien vers la route de déconnexion, URL générée par url_for de Flask #}
+<a href="{{ url_for('logout') }}">Se déconnecter</a>
+{# Fin du bloc "contenu" #}
+{% endblock %}
