@@ -5,33 +5,55 @@ import webbrowser
 # Importe les outils Flask nécessaires
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
+import sqlite3
+# Database
+con = sqlite3.connect("quizzapp.db")
+cur = con.cursor()
+cur.execute("""
+    CREATE TABLE IF NOT EXISTS utilisateurs (
+        login TEXT PRIMARY KEY,
+        password TEXT,
+        score INTEGER
+    )
+""")
+
 # Crée l'application Flask
 app = Flask(__name__)
 # Clé secrète utilisée pour signer la session (à changer en production)
 app.secret_key = "change-moi"
 
-# Données factices en attendant le back-end
-FAUX_UTILISATEURS = {"maram": "1234", "admin": "admin"}
+# Execute to add 2 ppl to the database before doing tests
+# Does NOT need to be run every time we lunch the app.
+def add_faux_utilisateurs(tab = [("maram", "1234"), ("admin", "admin")]):
+    for (login, mdp) in tab:
+        if cur.execute(f"SELECT {mdp} FROM utilisateurs WHERE login = {login}") != None:
+            return
+    cur.executemany("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", tab)
+    con.commit()
+    return
 
+# Use for testing
+def request_database(request):
+    return cur.execute(request).fetchall()
 
 # Vérifie si le couple identifiant / mot de passe est valide
 def verifier_identifiants(login, mdp):
     # À remplacer par la fonction du back-end
     # Renvoie True si le mot de passe correspond à l'identifiant
-    return FAUX_UTILISATEURS.get(login) == mdp
-
+    return cur.execute(f"SELECT password FROM utilisateurs WHERE login = {login}").fetchone() == mdp
 
 # Crée un nouvel utilisateur, renvoie False s'il existe déjà
 def creer_utilisateur(login, mdp):
     # À remplacer par la fonction du back-end
-    # Si l'identifiant est déjà pris
-    if login in FAUX_UTILISATEURS:
-        # Échec de la création
-        return False
-    # Enregistre le nouvel utilisateur
-    FAUX_UTILISATEURS[login] = mdp
-    # Création réussie
-    return True
+    # Si l'identifiant est libre
+    if cur.execute(f"SELECT * FROM utilisateurs WHERE login = {login}").fetchone() == None:
+        # Enregistre le nouvel utilisateur
+        cur.execute(f"INSERT INTO utilisateurs (login, password) VALUES ({login}, {mdp})")
+        con.commit()
+        # Création réussie
+        return True
+    # Échec de la création
+    return False
 
 
 # Route de la page de connexion (affichage et envoi du formulaire)
