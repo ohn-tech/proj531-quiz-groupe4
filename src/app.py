@@ -27,25 +27,51 @@ def close_db(exception):
     if db is not None:
         db.close()
 
+# action sera None pour tout le monde pour l'instant
+# type = réponses multiples ou bien réponse unique
 def create_table():
     db = get_db()
-    db.execute("""
+    db.executescript("""
         CREATE TABLE IF NOT EXISTS utilisateurs (
             login TEXT PRIMARY KEY,
-            password TEXT,
-            score INTEGER
+            password TEXT NOT NULL,
+            score INTEGER NOT NULL,
+            role TEXT
+        );
+        CREATE TABLE IF NOT EXISTS quizz (
+            id_quizz INTEGER PRIMARY KEY AUTOINCREMENT,
+            title TEXT NOT NULL,
+            description TEXT,
+            subject TEXT NOT NULL,
+            is_public INTEGER NOT NULL DEFAULT 0,
+            difficulty TEXT NOT NULL,
+            code TEXT,
+            link TEXT NOT NULL,
+            timer INTEGER NOT NULL DEFAULT 120
+        );
+        CREATE TABLE IF NOT EXISTS questions (
+            id_question INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_quizz INTEGER NOT NULL,
+            question TEXT NOT NULL,
+            award INTEGER NOT NULL DEFAULT 0
+        );
+        CREATE TABLE IF NOT EXISTS answers (
+            id_answer INTEGER PRIMARY KEY AUTOINCREMENT,
+            id_question INTEGER NOT NULL,
+            answer TEXT NOT NULL,
+            is_correct INTEGER NOT NULL DEFAULT 0
         )
     """)
     db.commit()
 
 # Execute to add 2 ppl to the database before doing tests
 # Does NOT need to be run every time we lunch the app.
-def add_faux_utilisateurs(tab = [("maram", "1234"), ("admin", "admin")]):
+def add_utilisateurs(tab = [("maram", "1234"), ("admin", "admin")]):
     db = get_db()
     for (login, mdp) in tab:
         # Correction : on vérifie avec fetchone() si l'utilisateur existe déjà
         if db.execute("SELECT 1 FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
-            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
+            db.execute("INSERT INTO utilisateurs (login, password, score) VALUES (?, ?, ?)", (login, mdp, 0))
     db.commit()
 
 def request_database(query, params=()):
@@ -65,6 +91,14 @@ def creer_utilisateur(login, mdp):
     if db.execute("SELECT * FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
         # Insertion sécurisée
         db.execute("INSERT INTO utilisateurs (login, password, score) VALUES (?, ?, ?)", (login, mdp, 0))
+        db.commit()
+        return True
+    return False
+
+def delete_utilisateur(login, mdp):
+    db = get_db()
+    if db.execute("SELECT * FROM utilisateurs WHERE login = ? AND password = ?", (login, mdp)).fetchone() is not None:
+        db.execute("DELETE * FROM utilisateurs WHERE login = ?", (login,))
         db.commit()
         return True
     return False
