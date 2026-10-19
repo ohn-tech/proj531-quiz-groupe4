@@ -14,7 +14,7 @@ Application Python permettant de créer et de passer des quiz.
 | Membre | Rôle |
 |---|---|
 | [Omar Hilali Najm] | Product Owner |
-| [Sanda Ghozzi] | Planificateur |
+| [Sanda Ghozzi] | Planificateur/ Scrum Master |
 | [Olivier De Rueda] | Développeur données / comptes |
 | [Maram Bel-Houchet] | Développeur quiz / interface |
 
