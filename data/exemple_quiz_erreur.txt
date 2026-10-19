@@ -1,0 +1,10 @@
+QUIZ: Test erreurs
+
+Q: Question sans bonne réponse ?
+- A
+- B
+
+Q: Question avec une seule réponse ?
++ A
+
+Ligne qui ne commence ni par Q:, ni par +, ni par -
