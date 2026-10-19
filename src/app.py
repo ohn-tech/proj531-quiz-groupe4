@@ -5,54 +5,68 @@ import webbrowser
 # Importe les outils Flask nécessaires
 from flask import Flask, render_template, request, redirect, url_for, session, flash
 
-import sqlite3
-# Database
-con = sqlite3.connect("quizzapp.db")
-cur = con.cursor()
-cur.execute("""
-    CREATE TABLE IF NOT EXISTS utilisateurs (
-        login TEXT PRIMARY KEY,
-        password TEXT,
-        score INTEGER
-    )
-""")
-
 # Crée l'application Flask
 app = Flask(__name__)
 # Clé secrète utilisée pour signer la session (à changer en production)
 app.secret_key = "change-moi"
 
+import sqlite3
+from flask import g
+
+DATABASE = "quizzapp.db"
+
+def get_db():
+    if 'db' not in g:
+        g.db = sqlite3.connect(DATABASE)
+        g.db.row_factory = sqlite3.Row
+    return g.db
+
+@app.teardown_appcontext
+def close_db(exception):
+    db = g.pop('db', None)
+    if db is not None:
+        db.close()
+
+def create_table():
+    db = get_db()
+    db.execute("""
+        CREATE TABLE IF NOT EXISTS utilisateurs (
+            login TEXT PRIMARY KEY,
+            password TEXT,
+            score INTEGER
+        )
+    """)
+    db.commit()
+
 # Execute to add 2 ppl to the database before doing tests
 # Does NOT need to be run every time we lunch the app.
 def add_faux_utilisateurs(tab = [("maram", "1234"), ("admin", "admin")]):
+    db = get_db()
     for (login, mdp) in tab:
-        if cur.execute(f"SELECT {mdp} FROM utilisateurs WHERE login = {login}") != None:
-            return
-    cur.executemany("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", tab)
-    con.commit()
-    return
+        # Correction : on vérifie avec fetchone() si l'utilisateur existe déjà
+        if db.execute("SELECT 1 FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
+            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
+    db.commit()
 
-# Use for testing
-def request_database(request):
-    return cur.execute(request).fetchall()
+def request_database(query, params=()):
+    db = get_db()
+    # Sécurisation contre les injections SQL via des paramètres
+    return db.execute(query, params).fetchall()
 
-# Vérifie si le couple identifiant / mot de passe est valide
 def verifier_identifiants(login, mdp):
-    # À remplacer par la fonction du back-end
-    # Renvoie True si le mot de passe correspond à l'identifiant
-    return cur.execute(f"SELECT password FROM utilisateurs WHERE login = {login}").fetchone() == mdp
-
-# Crée un nouvel utilisateur, renvoie False s'il existe déjà
-def creer_utilisateur(login, mdp):
-    # À remplacer par la fonction du back-end
-    # Si l'identifiant est libre
-    if cur.execute(f"SELECT * FROM utilisateurs WHERE login = {login}").fetchone() == None:
-        # Enregistre le nouvel utilisateur
-        cur.execute(f"INSERT INTO utilisateurs (login, password) VALUES ({login}, {mdp})")
-        con.commit()
-        # Création réussie
+    db = get_db()
+    if db.execute("SELECT password FROM utilisateurs WHERE login = ?", (login,)).fetchone() == mdp:
         return True
-    # Échec de la création
+    return False
+
+def creer_utilisateur(login, mdp):
+    db = get_db()
+    # Vérifie si l'utilisateur existe déjà
+    if db.execute("SELECT * FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
+        # Insertion sécurisée
+        db.execute("INSERT INTO utilisateurs (login, password, score) VALUES (?, ?, ?)", (login, mdp, 0))
+        db.commit()
+        return True
     return False
 
 
