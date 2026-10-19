@@ -1,104 +1,103 @@
 # Planning des sprints – Application Quiz Python
 
-**Groupe 4 – PROJ531** · Version du 19/10/2026
+**Groupe 4 – PROJ531** · Version 2 du 19/10/2026 (validée par le PO, avec ses ajustements)
 
 ## Hypothèses
 
 - 7 séances de 4 h : 13/10, 19/10, 23/10, 02/11, 09/11, 16/11 et 23/11.
 - Pas de travail en dehors des séances et pas d'absence prévue.
-- Capacité : 4 membres × 4 h = **16 h de travail par séance**.
+- Développement : Omar, Olivier et Maram. Sanda (Scrum Master) ne code pas : elle gère la planification, vérifie les critères d'acceptation, rédige les comptes-rendus et la partie gestion de projet du rapport.
 - La démonstration a lieu à la dernière séance (23/11). *À confirmer avec l'enseignant.*
-- Durées reprises des estimations Trello. Le rapport final passe de 6 h à 12 h (3 h par membre), car 6 h était sous-estimé.
-- Chaque séance se termine par 30 min de compte-rendu (Sanda) et un point d'équipe.
+- Rapport final : 12 h au total (6 h pour la partie gestion de projet, 2 h par développeur pour la partie produit et la démo).
+
+## Changements par rapport à la version 1
+
+| Changement | Décision |
+|---|---|
+| « Inscription » et « Connexion » fusionnées dans « Corriger la connexion à la base » (Olivier) | Proposé par le PO : même travail. Estimation passée à 4 h. |
+| MCD : Olivier → Omar | Validé par le PO |
+| Page passage du quiz et score : Omar → **Olivier** | Sanda ne code pas ; Olivier est le développeur le plus disponible à ce moment-là |
+| Minuterie (bonus) : Omar → Olivier | Validé par le PO |
+| Rapport final : 6 h → 12 h | Validé par le PO |
 
 ## Vue d'ensemble
 
-| Sprint | Séance(s) | Objectif du sprint | Terminé quand… |
+| Sprint | Séance(s) | Objectif | Livré en fin de sprint |
 |---|---|---|---|
-| **Sprint 0** | 13/10 | Mise en place du projet | Dépôt, Trello, WBS/PBS et prototype Flask en ligne ✅ |
-| **Sprint 1** | 19/10 – 23/10 | **Comptes utilisateurs** fonctionnels | Inscription, connexion et rôles admin / joueur validés ; MCD et structures de données en place |
-| **Sprint 2** | 02/11 | **Création de quiz** par l'admin | Création directe et import depuis un fichier texte, avec gestion des erreurs |
-| **Sprint 3** | 09/11 | **Passage de quiz** et **historique** | Le joueur passe un quiz, voit son score et la correction, consulte son historique |
-| **Sprint 4** | 16/11 – 23/11 | **Tests, rapport et démo** | Version stable sur le dépôt, rapport rendu, démo prête ; bonus si le temps le permet |
-
-Les sprints suivent les priorités du PO (P1 Comptes → P2 Création → P3 Passage → P4 Historique). Comme chaque module est porté par une seule personne, certains membres **commencent le module suivant dès qu'ils sont libres**. Par exemple, Maram démarre l'import de quiz dès le sprint 1. Sans ça, un seul membre aurait 13 à 14 h de travail sur une séance de 4 h.
+| **Sprint 0** | 13/10 | Mise en place | Dépôt, Trello, WBS/PBS, prototype Flask ✅ |
+| **Sprint 1** | 19/10 – 23/10 | **Comptes utilisateurs** + fondations | Inscription et connexion validées (19/10), rôles admin / joueur, MCD, structures utilisateur et quiz, import de fichier avec gestion des erreurs |
+| **Sprint 2** | 02/11 | **Création de quiz** | Création d'un quiz en saisie directe, liste des quiz, enregistrement des scores |
+| **Sprint 3** | 09/11 | **Passage de quiz** | Questions / réponses, page de passage, pages de création et d'import, affichage de l'historique |
+| **Sprint 4** | 16/11 – 23/11 | **Historique, tests, démo** | Score et correction, page historique, tests, rapport, démonstration |
 
 ## Chemin critique (PERT)
 
 **MCD → Structure quiz → Lister les quiz → Questions / réponses → Score et correction → Tests → Rapport + démo**
 
-Il représente 18 h de travail, soit 4,5 séances sur les 6 restantes. Un retard sur l'une de ces tâches retarde toute la fin du projet ; c'est elles qu'il faut surveiller en priorité. La dernière séance (23/11) sert de **marge de sécurité**.
+Il représente 17 h de travail, soit un peu plus de 4 séances sur les 6 restantes. Ce sont surtout les tâches d'**Omar** qu'il faut surveiller : un retard sur l'une d'elles retarde toute la fin du projet. La séance du 23/11 sert de marge de sécurité.
 
 ## Détail séance par séance
 
-### Sprint 1 – Comptes utilisateurs
+### Sprint 1 – Comptes utilisateurs et fondations
 
 #### Séance 2 – 19/10
 | Membre | Travail prévu |
 |---|---|
 | Omar | Format du fichier d'import + exemples dans `data/` (1 h) ; MCD (3 h) |
-| Sanda | Gantt / PERT (2 h) ; Planning des sprints (1 h) ; Compte-rendu (0,5 h) ; début Inscription (0,5 h) |
-| Olivier | Corriger la connexion à la base (2 h) ; Table utilisateur avec rôle (2 h) |
-| Maram | Import depuis un fichier texte (3 h) ; *1 h libre : aide à Olivier sur la connexion* |
+| Olivier | Corriger la connexion, avec les critères d'inscription et de connexion (4 h) |
+| Maram | Import depuis un fichier texte (3 h) ; 1 h libre |
+| Sanda | Gantt / PERT (2 h) ; planning des sprints (1 h) ; compte-rendu (0,5 h) ; rapport partie B (0,5 h) |
 
 #### Séance 3 – 23/10
 | Membre | Travail prévu |
 |---|---|
-| Omar | Rôles admin / joueur (2 h) ; Lister les quiz (2 h) |
-| Sanda | Inscription (2,5 h) ; début Connexion (1 h) ; Compte-rendu (0,5 h) |
-| Olivier | Structure quiz / question / réponses (2 h) ; Enregistrer le score (2 h) |
-| Maram | Fin de l'import (1 h) ; Erreurs d'import (2 h) ; début Création de quiz (1 h) |
+| Omar | Rôles admin / joueur (2 h) ; 2 h libres en début de séance, en attendant la table utilisateur : README (`requirements.txt`, installation) ou début des gabarits HTML des pages de création / import |
+| Olivier | Table utilisateur avec rôle (2 h) ; structure quiz / question / réponses (2 h) |
+| Maram | Fin de l'import (1 h) ; erreurs d'import (2 h) ; 1 h libre |
+| Sanda | Vérification des critères (1 h) ; rapport partie B (2,5 h) ; compte-rendu (0,5 h) |
 
 ### Sprint 2 – Création de quiz
 
 #### Séance 4 – 02/11
 | Membre | Travail prévu |
 |---|---|
-| Omar | Questions / réponses (4 h) |
-| Sanda | Fin de la Connexion (2 h) ; début Page passage du quiz (1,5 h) ; Compte-rendu (0,5 h) |
-| Olivier | Afficher l'historique (2 h) ; Page historique (2 h) |
-| Maram | Création d'un quiz en saisie directe (3 h) ; début Pages création / import (1 h) |
+| Omar | Lister les quiz (2 h) ; questions / réponses (2 h) |
+| Olivier | Enregistrer le score (2 h) ; page passage du quiz et score (2 h) |
+| Maram | Création d'un quiz en saisie directe (4 h) |
+| Sanda | Vérification des critères (1 h) ; rapport partie B (2,5 h) ; compte-rendu (0,5 h) |
 
-### Sprint 3 – Passage de quiz et historique
+### Sprint 3 – Passage de quiz
 
 #### Séance 5 – 09/11
 | Membre | Travail prévu |
 |---|---|
-| Omar | Score et correction (3 h) ; Tests (0,5 h) |
-| Sanda | Page passage du quiz et score (2,5 h) ; Tests (0,5 h) ; Compte-rendu (0,5 h) |
-| Olivier | Tests (0,5 h) ; Minuterie – bonus (1 h) ; *2,5 h libres : aide à Omar sur le score, relecture* |
-| Maram | Pages création et import de quiz (3 h) ; Tests (0,5 h) ; Export JSON – bonus (0,5 h) |
+| Omar | Fin des questions / réponses (2 h) ; score et correction (2 h) |
+| Olivier | Fin de la page passage (2 h) ; afficher l'historique (2 h) |
+| Maram | Pages création et import de quiz (4 h) |
+| Sanda | Vérification des critères (1 h) ; rapport partie B (0,5 h) ; compte-rendu (0,5 h) ; 2 h libres |
 
-### Sprint 4 – Tests, rapport et démo
+### Sprint 4 – Historique, tests et démo
 
 #### Séance 6 – 16/11
 | Membre | Travail prévu |
 |---|---|
-| Toute l'équipe | Fin des tests (0,5 h chacun) ; **Rapport final + préparation de la démo (3 h chacun)** |
-| Sanda | Compte-rendu (0,5 h) |
-| Olivier, Maram | Bonus (0,5 h chacun) |
+| Omar | Fin du score (1 h) ; tests (1 h) ; rapport partie produit (1 h) |
+| Olivier | Page historique (2 h) ; tests (1 h) ; rapport partie produit (1 h) |
+| Maram | Export JSON – bonus (2 h) ; tests (1 h) ; rapport partie produit (1 h) |
+| Sanda | Vérification finale des critères (1 h) ; compte-rendu (0,5 h) ; relecture du rapport |
 
 #### Séance 7 – 23/11
 | Membre | Travail prévu |
 |---|---|
-| Toute l'équipe | **Démonstration finale** ; marge pour rattraper un éventuel retard |
-| Olivier, Maram | Fin des bonus, uniquement si tout le reste est validé |
+| Toute l'équipe | Fin du rapport (1 h par développeur) ; **démonstration finale** ; marge pour rattraper un éventuel retard |
 | Sanda | Dernier compte-rendu |
 
-## Changements à valider avec l'équipe
+## Points d'attention
 
-Ces réattributions sont nécessaires pour que le planning tienne en 6 séances :
-
-| Carte | Avant | Proposé | Pourquoi |
-|---|---|---|---|
-| MCD | Olivier | **Omar** | Olivier a déjà la correction de la base et la table utilisateur à faire au sprint 1. Omar est libre en début de projet et le MCD fait partie de l'architecture globale (rôle du PO). |
-| Page passage du quiz et score | Omar | **Sanda** | Omar a 13 h de passage de quiz en un seul sprint ; Sanda a de la marge à partir du 02/11. |
-| Minuterie (bonus) | Omar | **Olivier** | Olivier est le plus libre en fin de projet. |
-| Rapport final + démo | 6 h | **12 h** (3 h par membre) | Estimation plus réaliste. |
-
-Si un de ces changements est refusé, le chemin critique s'allonge et le passage de quiz risque de ne pas être terminé avant les tests.
+- **Pages création / import (Maram)** : elles se terminent au sprint 3 et non au sprint 2. La chaîne import → erreurs → création → pages représente 14 h pour une seule personne, soit 3,5 séances. Pour les avancer, Omar peut commencer les gabarits HTML pendant ses 2 h libres du 23/10.
+- **Minuterie (bonus)** : elle n'entre pas dans le planning. On ne la fera que si le projet prend de l'avance.
+- **Chemin critique** : si une tâche d'Omar prend du retard, Maram ou Olivier (1 à 2 h libres certaines séances) viennent l'aider à la séance suivante.
 
 ## Suivi
 
-- À chaque fin de séance : mettre à jour le Trello (cartes déplacées et temps réel), écrire le compte-rendu, comparer l'avancement à ce planning.
-- Si une tâche du chemin critique prend du retard, on réaffecte un membre libre dessus dès la séance suivante.
+À chaque fin de séance : mise à jour du Trello (cartes déplacées, temps réel), compte-rendu sur GitHub, comparaison de l'avancement avec ce planning.
