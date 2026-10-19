@@ -1,0 +1,15 @@
+QUIZ: Capitales d'Europe
+
+Q: Quelle est la capitale de l'Espagne ?
+- Barcelone
++ Madrid
+- Séville
+
+Q: Quelle est la capitale de l'Italie ?
++ Rome
+- Milan
+- Naples
+
+Q: Quelle est la capitale du Portugal ?
+- Porto
++ Lisbonne
