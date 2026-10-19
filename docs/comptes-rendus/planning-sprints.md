@@ -36,6 +36,13 @@
 
 Il représente 17 h de travail, soit un peu plus de 4 séances sur les 6 restantes. Ce sont surtout les tâches d'**Omar** qu'il faut surveiller : un retard sur l'une d'elles retarde toute la fin du projet. La séance du 23/11 sert de marge de sécurité.
 
+
+## Diagrammes
+
+![Diagramme de Gantt](Gantt.png)
+
+![PERT](PERT.png)
+
 ## Détail séance par séance
 
 ### Sprint 1 – Comptes utilisateurs et fondations
