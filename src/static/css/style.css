@@ -1,20 +1,26 @@
+/* Feuille de style commune à toutes les pages de QuizApp */
+
+/* Police Poppins, chargée depuis Google Fonts */
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
 
+/* Couleurs et réglages réutilisés partout : les changer ici modifie tout le site */
 :root {
-    --primaire: #6366f1;
-    --primaire-fonce: #4f46e5;
-    --texte: #1f2937;
-    --texte-doux: #6b7280;
-    --bordure: #e5e7eb;
-    --erreur: #dc2626;
-    --erreur-fond: #fef2f2;
-    --rayon: 12px;
+    --primaire: #6366f1;        /* violet des boutons et des liens */
+    --primaire-fonce: #4f46e5;  /* violet au survol */
+    --texte: #1f2937;           /* texte principal */
+    --texte-doux: #6b7280;      /* texte secondaire (aides, libellés) */
+    --bordure: #e5e7eb;         /* bordures des champs et des cartes */
+    --erreur: #dc2626;          /* rouge des erreurs */
+    --erreur-fond: #fef2f2;     /* fond rose des erreurs */
+    --rayon: 12px;              /* arrondi des cartes */
 }
 
+/* Les largeurs incluent les marges intérieures et les bordures */
 * {
     box-sizing: border-box;
 }
 
+/* Page centrée sur un fond dégradé violet (pages connexion / inscription) */
 body {
     font-family: "Poppins", sans-serif;
     color: var(--texte);
@@ -371,6 +377,7 @@ body.page-large {
     transition: transform 0.2s, box-shadow 0.2s;
 }
 
+/* La carte se soulève un peu au survol */
 .carte-quiz:hover {
     transform: translateY(-4px);
     box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
@@ -382,6 +389,7 @@ body.page-large {
     font-weight: 600;
 }
 
+/* Badges « Quiz public » / « Quiz privé » */
 .badge-public,
 .badge-prive {
     align-self: flex-start;
@@ -402,6 +410,7 @@ body.page-large {
     background: #fef3c7;
 }
 
+/* Code et lien de partage, affichés au créateur d'un quiz privé */
 .infos-partage {
     margin-top: 1rem;
     padding-top: 0.75rem;
@@ -437,6 +446,7 @@ body.page-large {
     color: var(--primaire);
 }
 
+/* Lien qui ressemble à un bouton (« Commencer ») */
 .btn-principal {
     padding: 0.7rem;
     text-align: center;
@@ -451,11 +461,13 @@ body.page-large {
     background: var(--primaire-fonce);
 }
 
+/* Message « Aucun quiz disponible » */
 .vide {
     color: #ffffff;
     text-align: center;
 }
 
+/* Liens « Rejoindre un quiz privé » et « Importer un quiz » sous la grille */
 .rejoindre-lien {
     margin: 1.5rem 0;
     text-align: right;
@@ -467,11 +479,14 @@ body.page-large {
     text-decoration: underline;
 }
 
+/* Bouton « Connectez-vous pour créer un quiz » (visiteur non connecté) */
 .connexion-creation {
     margin-top: 1.5rem;
     text-align: center;
 }
 
+/* ---------- Formulaire « Créer un quiz » (accueil) ---------- */
+/* Bloc repliable : on clique sur « Créer un quiz » pour l'ouvrir */
 .creation-quiz {
     margin-top: 2rem;
     padding: 1.5rem;
@@ -495,6 +510,7 @@ body.page-large {
     gap: 0.25rem;
 }
 
+/* Une question du formulaire de création */
 .question-a-creer {
     min-width: 0;
     margin: 1rem 0;
@@ -526,6 +542,7 @@ body.page-large {
     margin: 0.75rem 0;
 }
 
+/* Une réponse : case « bonne réponse », texte, bouton × */
 .answer-option {
     display: flex;
     align-items: center;
@@ -536,6 +553,7 @@ body.page-large {
     transition: background 0.15s, border-color 0.15s;
 }
 
+/* Bonne réponse en vert, les autres en rouge dès qu'une bonne réponse est cochée */
 .answer-option.is-correct {
     background: #f0fdf4;
     border-color: #16a34a;
@@ -586,6 +604,7 @@ body.page-large {
     background: var(--erreur-fond);
 }
 
+/* Boutons réutilisables : rouge (supprimer) et violet clair (action secondaire) */
 .bouton-danger {
     background: var(--erreur);
 }
@@ -594,6 +613,7 @@ body.page-large {
     background: #b91c1c;
 }
 
+/* Petit texte d'aide sous un formulaire */
 .aide-formulaire {
     color: var(--texte-doux);
     font-size: 0.85rem;

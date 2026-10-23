@@ -47,6 +47,7 @@ document.addEventListener("DOMContentLoaded", () => {
     // Compteur pour donner un nom unique au groupe de boutons radio de chaque question
     let compteurQuestions = 0;
 
+    // Renvoie le mode coché : "document" (générer) ou "quiz" (quiz déjà écrit)
     function modeActuel() {
         return formAnalyse.querySelector('input[name="mode"]:checked').value;
     }
@@ -82,6 +83,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return `${(octets / 1_000_000).toFixed(1).replace(".", ",")} Mo`;
     }
 
+    // Renvoie l'extension d'un nom de fichier en minuscules (".pdf"), ou "" s'il n'en a pas
     function extensionDe(nom) {
         const point = nom.lastIndexOf(".");
         return point === -1 ? "" : nom.slice(point).toLowerCase();
@@ -132,36 +134,44 @@ document.addEventListener("DOMContentLoaded", () => {
         return true;
     }
 
+    // Oublie le fichier choisi et réaffiche la zone de dépôt
     function retirerFichier() {
         fichier = null;
+        // Vide le champ pour pouvoir choisir à nouveau le même fichier
         champFichier.value = "";
         fichierChoisi.hidden = true;
         zoneDepot.hidden = false;
     }
 
+    // Changer de mode met à jour la page
     formAnalyse.querySelectorAll('input[name="mode"]').forEach((radio) => {
         radio.addEventListener("change", appliquerMode);
     });
 
+    // Fichier choisi avec le sélecteur (clic sur la zone de dépôt)
     champFichier.addEventListener("change", () => {
         if (champFichier.files.length) choisirFichier(champFichier.files[0]);
     });
 
     // Glisser-déposer : on surligne la zone pendant le survol
+    // (preventDefault empêche le navigateur d'ouvrir le fichier lui-même)
     ["dragenter", "dragover"].forEach((type) => {
         zoneDepot.addEventListener(type, (evenement) => {
             evenement.preventDefault();
             zoneDepot.classList.add("survol");
         });
     });
+    // Le fichier sort de la zone ou est lâché : on enlève le surlignage
     ["dragleave", "drop"].forEach((type) => {
         zoneDepot.addEventListener(type, () => zoneDepot.classList.remove("survol"));
     });
+    // Fichier lâché sur la zone : on garde seulement le premier
     zoneDepot.addEventListener("drop", (evenement) => {
         evenement.preventDefault();
         if (evenement.dataTransfer.files.length) choisirFichier(evenement.dataTransfer.files[0]);
     });
 
+    // Bouton « Changer » : retire le fichier et rouvre directement le sélecteur
     document.getElementById("fichier-retirer").addEventListener("click", () => {
         retirerFichier();
         champFichier.click();
@@ -200,6 +210,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
     // ---------- Étape 2 : vérification ----------
 
+    // Passe d'une étape à l'autre (true = vérification, false = fichier) et met à jour l'indicateur 1 / 2
     function changerEtape(verification) {
         etapeFichier.hidden = verification;
         etapeVerification.hidden = !verification;
@@ -218,17 +229,20 @@ document.addEventListener("DOMContentLoaded", () => {
             `${nb} question${nb > 1 ? "s" : ""} ${origine} « ${fichier.name} ». Corrigez-les si besoin avant d'enregistrer.`;
         document.getElementById("bandeau-simulation").hidden = !quiz.simule;
 
+        // Remplace les questions d'un éventuel import précédent
         listeQuestions.replaceChildren();
         quiz.questions.forEach(ajouterQuestion);
         mettreAJour();
         afficherErreurs(erreursEnregistrement, []);
         changerEtape(true);
+        // Place le focus sur le titre de l'étape (utile au clavier et aux lecteurs d'écran)
         document.getElementById("titre-verification").focus();
     }
 
     // Ajoute une carte de question (vide si aucune question n'est donnée)
     function ajouterQuestion(question = { texte: "", choix: ["", ""], reponse: null }) {
         const carte = modeleQuestion.content.firstElementChild.cloneNode(true);
+        // Nom commun aux boutons radio de cette question : une seule bonne réponse cochable
         carte.dataset.groupe = `bonne-reponse-${compteurQuestions++}`;
         carte.querySelector(".question-import-texte").value = question.texte;
         question.choix.forEach((choix, indice) => ajouterReponse(carte, choix, indice === question.reponse));
@@ -236,6 +250,7 @@ document.addEventListener("DOMContentLoaded", () => {
         return carte;
     }
 
+    // Ajoute une ligne de réponse à une question (cochée si c'est la bonne réponse)
     function ajouterReponse(carte, texte = "", correcte = false) {
         const ligne = modeleReponse.content.firstElementChild.cloneNode(true);
         const radio = ligne.querySelector(".reponse-import-correcte");
@@ -257,6 +272,7 @@ document.addEventListener("DOMContentLoaded", () => {
 
             const lignes = carte.querySelectorAll(".reponse-import");
             lignes.forEach((ligne, indiceReponse) => {
+                // 0 → A, 1 → B, 2 → C...
                 const lettre = String.fromCharCode(65 + indiceReponse);
                 ligne.querySelector(".reponse-import-texte").placeholder = `Réponse ${lettre}`;
                 ligne.querySelector(".reponse-import-texte").setAttribute("aria-label", `Question ${numero}, réponse ${lettre}`);
@@ -275,13 +291,17 @@ document.addEventListener("DOMContentLoaded", () => {
         const carte = evenement.target.closest(".question-import");
         if (!carte) return;
 
+        // Bouton « Supprimer » de la question
         if (evenement.target.closest(".question-import-supprimer")) {
             carte.remove();
+        // Bouton « + Ajouter une réponse » : on place le curseur dans la nouvelle réponse
         } else if (evenement.target.closest(".ajouter-reponse-import")) {
             ajouterReponse(carte);
             carte.querySelector(".reponse-import:last-child .reponse-import-texte").focus();
+        // Bouton × d'une réponse
         } else if (evenement.target.closest(".reponse-import-supprimer")) {
             evenement.target.closest(".reponse-import").remove();
+        // Clic ailleurs dans la carte : rien à faire
         } else {
             return;
         }
@@ -293,12 +313,14 @@ document.addEventListener("DOMContentLoaded", () => {
         if (evenement.target.matches(".reponse-import-correcte")) mettreAJour();
     });
 
+    // Bouton « + Ajouter une question » : ajoute une question vide et place le curseur dedans
     boutonAjouterQuestion.addEventListener("click", () => {
         const carte = ajouterQuestion();
         mettreAJour();
         carte.querySelector(".question-import-texte").focus();
     });
 
+    // Bouton « Retour » : revient à l'étape 1 sans perdre le fichier choisi
     document.getElementById("bouton-retour").addEventListener("click", () => changerEtape(false));
 
     // Lit le quiz tel qu'il est affiché (avec les corrections de l'utilisateur)
@@ -357,18 +379,22 @@ document.addEventListener("DOMContentLoaded", () => {
                 headers: { "Content-Type": "application/json" },
                 body: JSON.stringify(quiz),
             });
+            // Réponse vide si le serveur n'a pas renvoyé de JSON (erreur 500 par exemple)
             const resultat = await reponse.json().catch(() => ({}));
             if (!reponse.ok) {
                 afficherErreurs(erreursEnregistrement, resultat.erreurs || [`Erreur du serveur (code ${reponse.status}). Réessayez.`]);
                 return;
             }
+            // Quiz enregistré : le serveur indique où aller (l'accueil, avec un message de succès)
             window.location.href = resultat.redirection;
         } catch {
+            // fetch échoue seulement si le serveur ne répond pas du tout
             afficherErreurs(erreursEnregistrement, ["Impossible de joindre le serveur. Vérifiez qu'il est bien lancé, puis réessayez."]);
         } finally {
             enChargement(boutonEnregistrer, false, "Enregistrer le quiz");
         }
     });
 
+    // Au chargement : affiche les textes du mode coché par défaut (« Générer à partir d'un document »)
     appliquerMode();
 });
