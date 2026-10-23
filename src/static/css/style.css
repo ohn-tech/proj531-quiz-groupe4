@@ -461,6 +461,12 @@ body.page-large {
     text-align: right;
 }
 
+/* Liens posés sur le fond violet : en blanc pour rester lisibles */
+.rejoindre-lien a {
+    color: #ffffff;
+    text-decoration: underline;
+}
+
 .connexion-creation {
     margin-top: 1.5rem;
     text-align: center;
@@ -756,4 +762,601 @@ body.page-large .succes {
 .choix:has(input:checked) {
     border-color: var(--primaire);
     background: rgba(99, 102, 241, 0.08);
+}
+
+/* ---------- Page d'import ---------- */
+/* Caché à l'écran mais lu par les lecteurs d'écran */
+.visuellement-cache {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    padding: 0;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+    border: 0;
+}
+
+/* L'attribut hidden doit gagner sur les display: flex de la page */
+.importeur [hidden] {
+    display: none !important;
+}
+
+.importeur {
+    display: flex;
+    flex-direction: column;
+    gap: 1.25rem;
+}
+
+.importeur-entete .titre-page {
+    margin-bottom: 0.35rem;
+}
+
+.importeur-intro {
+    margin: 0;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Indicateur d'étapes (1 Fichier, 2 Vérification) */
+.importeur-etapes {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.importeur-etapes li {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.7);
+}
+
+.importeur-etapes li + li::before {
+    content: "";
+    width: 2.5rem;
+    height: 2px;
+    margin-right: 0.25rem;
+    background: rgba(255, 255, 255, 0.35);
+}
+
+.etape-numero {
+    display: inline-grid;
+    place-items: center;
+    width: 1.75rem;
+    height: 1.75rem;
+    font-size: 0.8rem;
+    border: 2px solid rgba(255, 255, 255, 0.6);
+    border-radius: 50%;
+}
+
+.importeur-etapes li.actif {
+    color: #ffffff;
+}
+
+.importeur-etapes li.actif .etape-numero {
+    color: var(--primaire-fonce);
+    background: #ffffff;
+    border-color: #ffffff;
+}
+
+.importeur-etapes li.fait .etape-numero {
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.25);
+    border-color: transparent;
+}
+
+/* Carte blanche de chaque étape */
+.importeur-panneau {
+    padding: 2rem;
+    background: #ffffff;
+    border-radius: var(--rayon);
+    box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
+    animation: apparition 0.4s ease-out;
+}
+
+.importeur-panneau form {
+    gap: 1.25rem;
+}
+
+.importeur-panneau input,
+.importeur-panneau select,
+.importeur-panneau textarea {
+    margin-bottom: 0;
+}
+
+/* Choix du mode : deux cartes cliquables */
+.importeur-modes {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+    gap: 0.75rem;
+    margin: 0;
+    padding: 0;
+    border: none;
+}
+
+.importeur-modes legend {
+    margin-bottom: 0.75rem;
+    padding: 0;
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--texte);
+}
+
+.importeur-mode {
+    position: relative;
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    margin: 0;
+    padding: 1rem 1rem 1rem 2.75rem;
+    border: 1.5px solid var(--bordure);
+    border-radius: 10px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.importeur-mode:hover {
+    border-color: #c7d2fe;
+}
+
+.importeur-mode:has(input:checked) {
+    border-color: var(--primaire);
+    background: rgba(99, 102, 241, 0.06);
+}
+
+.importeur-mode:has(input:focus-visible) {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.importeur-mode input {
+    position: absolute;
+    top: 1.15rem;
+    left: 1rem;
+    width: 1rem;
+    height: 1rem;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--primaire);
+}
+
+.importeur-mode-titre {
+    font-size: 0.95rem;
+    font-weight: 600;
+    color: var(--texte);
+}
+
+.importeur-mode-texte {
+    font-size: 0.85rem;
+    font-weight: 400;
+    color: var(--texte-doux);
+}
+
+.importeur-mode code {
+    padding: 0 0.25rem;
+    font-size: 0.8rem;
+    background: #f3f4f6;
+    border-radius: 4px;
+}
+
+/* Zone de dépôt du fichier */
+.zone-depot {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 0.3rem;
+    margin: 0;
+    padding: 2.25rem 1rem;
+    text-align: center;
+    background: #f8f9ff;
+    border: 2px dashed #c7d2fe;
+    border-radius: 12px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.zone-depot:hover,
+.zone-depot.survol {
+    border-color: var(--primaire);
+    background: rgba(99, 102, 241, 0.08);
+}
+
+/* Le vrai champ fichier est caché : on montre son focus sur la zone */
+.importeur-panneau form:has(#fichier-import:focus-visible) .zone-depot {
+    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.25);
+}
+
+.zone-depot-icone {
+    width: 2.5rem;
+    height: 2.5rem;
+    margin-bottom: 0.35rem;
+    color: var(--primaire);
+}
+
+.zone-depot-titre {
+    font-size: 1rem;
+    font-weight: 600;
+    color: var(--texte);
+}
+
+.zone-depot-texte {
+    font-size: 0.9rem;
+    font-weight: 400;
+}
+
+.zone-depot-lien {
+    font-weight: 500;
+    color: var(--primaire);
+    text-decoration: underline;
+}
+
+.zone-depot-formats {
+    margin-top: 0.5rem;
+    font-size: 0.8rem;
+    font-weight: 400;
+}
+
+/* Fichier choisi */
+.fichier-choisi {
+    display: flex;
+    align-items: center;
+    gap: 0.9rem;
+    padding: 0.9rem 1rem;
+    background: #fafafa;
+    border: 1.5px solid var(--bordure);
+    border-radius: 10px;
+}
+
+.fichier-extension {
+    flex-shrink: 0;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    letter-spacing: 0.04em;
+    color: #ffffff;
+    background: var(--primaire);
+    border-radius: 8px;
+}
+
+.fichier-infos {
+    flex: 1;
+    min-width: 0;
+    display: flex;
+    flex-direction: column;
+}
+
+.fichier-infos strong {
+    overflow: hidden;
+    font-weight: 500;
+    text-overflow: ellipsis;
+    white-space: nowrap;
+}
+
+.fichier-infos span {
+    font-size: 0.8rem;
+    color: var(--texte-doux);
+}
+
+.fichier-retirer {
+    margin: 0;
+    padding: 0.45rem 0.9rem;
+    font-size: 0.85rem;
+    color: var(--primaire-fonce);
+    background: #eef2ff;
+}
+
+.fichier-retirer:hover {
+    background: #e0e7ff;
+}
+
+.importeur-option {
+    display: flex;
+    flex-direction: column;
+    max-width: 260px;
+}
+
+/* Rappel du format (mode quiz déjà écrit) */
+.format-import summary {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: var(--primaire);
+    cursor: pointer;
+}
+
+.format-import pre {
+    margin: 0.75rem 0 0;
+    padding: 0.85rem 1rem;
+    overflow-x: auto;
+    font-size: 0.85rem;
+    background: #f9fafb;
+    border: 1.5px solid var(--bordure);
+    border-radius: 8px;
+}
+
+.format-import p {
+    margin: 0.5rem 0 0;
+    font-size: 0.85rem;
+    color: var(--texte-doux);
+}
+
+/* Liste des erreurs */
+.importeur-erreurs {
+    padding: 0.85rem 1rem;
+    font-size: 0.9rem;
+    color: var(--erreur);
+    background: var(--erreur-fond);
+    border-left: 4px solid var(--erreur);
+    border-radius: 8px;
+}
+
+.importeur-erreurs-titre {
+    margin: 0 0 0.35rem;
+    font-weight: 600;
+}
+
+.importeur-erreurs ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.importeur-erreurs li + li {
+    margin-top: 0.25rem;
+}
+
+/* Boutons du bas */
+.importeur-actions {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: flex-end;
+    gap: 0.75rem;
+}
+
+.importeur-actions button {
+    margin-top: 0;
+    padding: 0.8rem 1.4rem;
+}
+
+.importeur-bouton {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    gap: 0.6rem;
+    min-width: 12rem;
+}
+
+.importeur-bouton:disabled {
+    opacity: 0.75;
+    cursor: wait;
+}
+
+/* Roue d'attente dans le bouton pendant l'envoi */
+.spinner {
+    display: none;
+    width: 1rem;
+    height: 1rem;
+    border: 2px solid rgba(255, 255, 255, 0.4);
+    border-top-color: #ffffff;
+    border-radius: 50%;
+    animation: tourner 0.7s linear infinite;
+}
+
+.en-chargement .spinner {
+    display: inline-block;
+}
+
+@keyframes tourner {
+    to { transform: rotate(360deg); }
+}
+
+@media (prefers-reduced-motion: reduce) {
+    .spinner { animation-duration: 2s; }
+    .importeur-panneau { animation: none; }
+}
+
+/* Étape 2 : vérification */
+.verification-entete h2 {
+    margin: 0 0 0.25rem;
+    font-size: 1.3rem;
+}
+
+.verification-entete h2:focus {
+    outline: none;
+}
+
+.verification-entete p {
+    margin: 0;
+    font-size: 0.9rem;
+    color: var(--texte-doux);
+}
+
+.bandeau-simulation {
+    margin: 1rem 0 0;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    color: #92400e;
+    background: #fffbeb;
+    border-left: 4px solid #f59e0b;
+    border-radius: 8px;
+}
+
+#etape-verification form {
+    margin-top: 1.25rem;
+}
+
+.importeur-reglages {
+    display: grid;
+    grid-template-columns: 2fr 1fr 1fr;
+    gap: 1rem;
+}
+
+.reglage {
+    display: flex;
+    flex-direction: column;
+    min-width: 0;
+}
+
+.liste-questions {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+/* Carte d'une question à vérifier */
+.question-import {
+    display: flex;
+    flex-direction: column;
+    gap: 0.6rem;
+    padding: 1rem 1.1rem;
+    border: 1.5px solid var(--bordure);
+    border-radius: 10px;
+    transition: border-color 0.2s;
+}
+
+.question-import:focus-within {
+    border-color: #c7d2fe;
+}
+
+.question-import.a-corriger {
+    background: var(--erreur-fond);
+    border-color: var(--erreur);
+}
+
+.question-import-entete {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.question-import-numero {
+    font-size: 0.8rem;
+    font-weight: 600;
+    letter-spacing: 0.06em;
+    text-transform: uppercase;
+    color: var(--primaire-fonce);
+}
+
+.lien-supprimer {
+    margin: 0;
+    padding: 0.25rem 0.5rem;
+    font-size: 0.85rem;
+    color: var(--texte-doux);
+    background: none;
+}
+
+.lien-supprimer:hover {
+    color: var(--erreur);
+    text-decoration: underline;
+    background: none;
+}
+
+.question-import-texte {
+    font-weight: 500;
+}
+
+.question-import-aide {
+    margin: 0;
+    font-size: 0.8rem;
+    color: var(--texte-doux);
+}
+
+.reponses-import {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    margin: 0;
+    padding: 0;
+    list-style: none;
+}
+
+.reponse-import {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.25rem 0.5rem 0.25rem 0.6rem;
+    border: 1.5px solid transparent;
+    border-radius: 8px;
+    transition: background 0.2s, border-color 0.2s;
+}
+
+/* Bonne réponse cochée : en vert */
+.reponse-import.correcte {
+    background: #f0fdf4;
+    border-color: #86efac;
+}
+
+.reponse-import-correcte {
+    flex-shrink: 0;
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    padding: 0;
+    accent-color: #16a34a;
+    cursor: pointer;
+}
+
+.reponse-import-texte {
+    flex: 1;
+    min-width: 0;
+    padding: 0.55rem 0.75rem;
+}
+
+.reponse-import-supprimer {
+    flex-shrink: 0;
+    width: 2rem;
+    height: 2rem;
+    margin: 0;
+    padding: 0;
+    font-size: 1.2rem;
+    line-height: 1;
+    color: var(--texte-doux);
+    background: none;
+}
+
+.reponse-import-supprimer:hover {
+    color: var(--erreur);
+    background: var(--erreur-fond);
+}
+
+/* Boutons d'ajout (question, réponse) */
+.bouton-ajout {
+    align-self: flex-start;
+    margin: 0;
+    padding: 0.6rem 1rem;
+    font-size: 0.9rem;
+    color: var(--primaire-fonce);
+    background: none;
+    border: 1.5px dashed #c7d2fe;
+}
+
+.bouton-ajout:hover {
+    background: #eef2ff;
+    border-color: var(--primaire);
+}
+
+.bouton-ajout-petit {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+/* Petit écran : une seule colonne */
+@media (max-width: 640px) {
+    .importeur-panneau {
+        padding: 1.25rem;
+    }
+
+    .importeur-reglages {
+        grid-template-columns: 1fr;
+    }
+
+    .importeur-actions button {
+        flex: 1;
+    }
 }

@@ -45,6 +45,10 @@
 
     {# Accès à un quiz privé avec son code de partage #}
     <p class="rejoindre-lien"><a href="{{ url_for('rejoindre_quiz') }}">Rejoindre un quiz privé avec un code</a></p>
+    {# Import d'un quiz depuis un fichier texte, réservé aux utilisateurs connectés #}
+    {% if utilisateur %}
+        <p class="rejoindre-lien"><a href="{{ url_for('importer_quiz') }}">Importer un quiz depuis un fichier texte</a></p>
+    {% endif %}
 
     {# Formulaire de création, réservé aux utilisateurs connectés (géré par create-quiz.js) #}
     {% if utilisateur %}

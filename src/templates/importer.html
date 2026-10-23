@@ -1,0 +1,164 @@
+{# Page d'import : générer un quiz à partir d'un document, ou importer un quiz déjà écrit #}
+{# Le fonctionnement (dépôt du fichier, vérification, enregistrement) est géré par importer.js #}
+{% extends "base.html" %}
+{% block titre %}Importer un quiz{% endblock %}
+{% block classe_body %}page-large{% endblock %}
+
+{% block contenu %}
+<main class="conteneur conteneur-etroit importeur">
+    <div class="importeur-entete">
+        <h1 class="titre-page">Importer un quiz</h1>
+        <p class="importeur-intro">Générez un quiz à partir d'un cours, ou importez un quiz que vous avez déjà écrit.</p>
+    </div>
+
+    {# Étapes : importer.js déplace la classe "actif" #}
+    <ol class="importeur-etapes" aria-label="Étapes de l'import">
+        <li class="actif" id="indicateur-fichier"><span class="etape-numero">1</span>Fichier</li>
+        <li id="indicateur-verification"><span class="etape-numero">2</span>Vérification</li>
+    </ol>
+
+    {# ---------- Étape 1 : choix du mode et du fichier ---------- #}
+    <section class="importeur-panneau" id="etape-fichier">
+        <form id="form-analyse" novalidate>
+            <fieldset class="importeur-modes">
+                <legend>Que voulez-vous faire ?</legend>
+                <label class="importeur-mode">
+                    <input type="radio" name="mode" value="document" checked>
+                    <span class="importeur-mode-titre">Générer à partir d'un document</span>
+                    <span class="importeur-mode-texte">Un cours ou des notes en TXT ou PDF. Les questions sont créées automatiquement.</span>
+                </label>
+                <label class="importeur-mode">
+                    <input type="radio" name="mode" value="quiz">
+                    <span class="importeur-mode-titre">Importer un quiz déjà écrit</span>
+                    <span class="importeur-mode-texte">Un fichier TXT au format <code>QUIZ:</code>, <code>Q:</code>, <code>+</code>, <code>-</code>.</span>
+                </label>
+            </fieldset>
+
+            {# Zone de dépôt : un clic ouvre le sélecteur de fichier, on peut aussi y glisser un fichier #}
+            <label class="zone-depot" id="zone-depot" for="fichier-import">
+                <svg class="zone-depot-icone" viewBox="0 0 24 24" aria-hidden="true">
+                    <path d="M12 16V4m0 0l-4.5 4.5M12 4l4.5 4.5M4 15v3a2 2 0 002 2h12a2 2 0 002-2v-3" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"/>
+                </svg>
+                <span class="zone-depot-titre">Glissez votre fichier ici</span>
+                <span class="zone-depot-texte">ou <span class="zone-depot-lien">parcourez votre ordinateur</span></span>
+                <span class="zone-depot-formats" id="formats-acceptes">TXT ou PDF · 5 Mo maximum</span>
+            </label>
+            <input type="file" id="fichier-import" name="fichier" accept=".txt,.pdf" class="visuellement-cache">
+
+            {# Fichier choisi, affiché à la place de la zone de dépôt #}
+            <div class="fichier-choisi" id="fichier-choisi" hidden>
+                <span class="fichier-extension" id="fichier-extension">TXT</span>
+                <span class="fichier-infos">
+                    <strong id="fichier-nom"></strong>
+                    <span id="fichier-taille"></span>
+                </span>
+                <button type="button" class="fichier-retirer" id="fichier-retirer">Changer</button>
+            </div>
+
+            {# Nombre de questions à générer (mode document seulement) #}
+            <div class="importeur-option" id="option-nb-questions">
+                <label for="nb-questions">Nombre de questions à générer</label>
+                <select id="nb-questions" name="nb_questions">
+                    <option value="5">5 questions</option>
+                    <option value="10" selected>10 questions</option>
+                    <option value="15">15 questions</option>
+                    <option value="20">20 questions</option>
+                </select>
+            </div>
+
+            {# Rappel du format (mode quiz déjà écrit seulement) #}
+            <details class="format-import" id="aide-format" hidden>
+                <summary>Voir le format attendu</summary>
+                <pre>QUIZ: Titre du quiz
+
+Q: Première question ?
++ Bonne réponse
+- Mauvaise réponse
+
+Q: Deuxième question ?
+- Mauvaise réponse
++ Bonne réponse</pre>
+                <p>Une ligne vide sépare deux questions. Chaque question a 2 à 6 réponses, dont une seule bonne.</p>
+            </details>
+
+            <div class="importeur-erreurs" id="erreurs-analyse" role="alert" hidden></div>
+
+            <div class="importeur-actions">
+                <button type="submit" class="importeur-bouton" id="bouton-analyser">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span class="bouton-texte">Générer le quiz</span>
+                </button>
+            </div>
+        </form>
+    </section>
+
+    {# ---------- Étape 2 : vérification et enregistrement ---------- #}
+    <section class="importeur-panneau" id="etape-verification" hidden>
+        <div class="verification-entete">
+            <h2 id="titre-verification" tabindex="-1">Vérifiez le quiz</h2>
+            <p id="resume-quiz"></p>
+        </div>
+
+        {# Prévient que les questions viennent du générateur factice #}
+        <p class="bandeau-simulation" id="bandeau-simulation" hidden>
+            <strong>Génération simulée.</strong> Ces questions sont des exemples, en attendant le vrai générateur.
+        </p>
+
+        <form id="form-enregistrement" novalidate>
+            <div class="importeur-reglages">
+                <div class="reglage reglage-titre">
+                    <label for="titre-import">Titre du quiz</label>
+                    <input type="text" id="titre-import" maxlength="100" required>
+                </div>
+                <div class="reglage">
+                    <label for="visibilite-import">Visibilité</label>
+                    <select id="visibilite-import">
+                        <option value="public">Public</option>
+                        <option value="prive">Privé (avec un code)</option>
+                    </select>
+                </div>
+                <div class="reglage">
+                    <label for="duree-import">Minuteur (secondes)</label>
+                    <input type="number" id="duree-import" min="10" max="3600" value="120" required>
+                </div>
+            </div>
+
+            <div class="liste-questions" id="liste-questions"></div>
+
+            <button type="button" class="bouton-ajout" id="ajouter-question-import">+ Ajouter une question</button>
+
+            <div class="importeur-erreurs" id="erreurs-enregistrement" role="alert" hidden></div>
+
+            <div class="importeur-actions">
+                <button type="button" class="bouton-secondaire" id="bouton-retour">Retour</button>
+                <button type="submit" class="importeur-bouton" id="bouton-enregistrer">
+                    <span class="spinner" aria-hidden="true"></span>
+                    <span class="bouton-texte">Enregistrer le quiz</span>
+                </button>
+            </div>
+        </form>
+    </section>
+
+    {# Modèles copiés par importer.js pour afficher chaque question et chaque réponse #}
+    <template id="modele-question-import">
+        <article class="question-import">
+            <div class="question-import-entete">
+                <span class="question-import-numero"></span>
+                <button type="button" class="lien-supprimer question-import-supprimer">Supprimer</button>
+            </div>
+            <textarea class="question-import-texte" rows="2" maxlength="300" required></textarea>
+            <p class="question-import-aide">Réponses : cochez la bonne</p>
+            <ul class="reponses-import"></ul>
+            <button type="button" class="bouton-ajout bouton-ajout-petit ajouter-reponse-import">+ Ajouter une réponse</button>
+        </article>
+    </template>
+    <template id="modele-reponse-import">
+        <li class="reponse-import">
+            <input type="radio" class="reponse-import-correcte">
+            <input type="text" class="reponse-import-texte" maxlength="200" required>
+            <button type="button" class="reponse-import-supprimer">×</button>
+        </li>
+    </template>
+</main>
+<script src="{{ url_for('static', filename='js/importer.js') }}"></script>
+{% endblock %}
