@@ -46,7 +46,7 @@ Les bugs ci-dessous ont été constatés par le PO en lançant l'application (bi
 |---|---|---|
 | B1 | Critique | Connexion impossible : la vérification du mot de passe compare un objet `sqlite3.Row` à une chaîne. |
 | B2 | Critique | Erreur 500 sur une base neuve : les tables ne sont jamais créées au démarrage. |
-| B3 | Majeur | Mots de passe enregistrés en clair. |
+| B3 | Majeur | Mots de passe enregistrés en clair. *Reporté au sprint 4 (carte « Sécurité : hachage + clé secrète »).* |
 | B4 | Majeur | Erreur SQL dans `delete_utilisateur` (`DELETE * FROM`). |
 | B5 | Majeur | Une base locale ancienne n'a pas la nouvelle colonne : chacun doit supprimer son `quizzapp.db`. |
 
@@ -64,10 +64,12 @@ Problèmes d'organisation : tout est poussé directement sur `main` sans relectu
 | Priorité | Qui | Action | Fait quand… |
 |---|---|---|---|
 | 1 | Omar + Olivier | Trancher les problèmes de conception (créateur, scores, colonnes, clés étrangères, code unique) et faire le **MCD** avant de toucher à la structure quiz | MCD poussé dans `docs/`, schéma aligné dessus |
-| 2 | Olivier | Corriger B1 à B5 ; ajouter `quizzapp.db` au `.gitignore` | Inscription → déconnexion → connexion fonctionne sur une base neuve ; mot de passe haché |
+| 2 | Olivier | Corriger B1, B2, B4 et B5 ; ajouter `quizzapp.db` au `.gitignore` | Inscription → déconnexion → connexion fonctionne sur une base neuve ; la suppression de compte demande une simple confirmation « Êtes-vous sûr ? » |
 | 3 | Maram | Pousser l'import en début de séance, même partiel, sur une branche | `exemple_quiz.txt` importé ; `exemple_quiz_erreur.txt` rejeté avec des messages clairs |
 | 4 | Omar | Règles du format d'import dans le README ; `requirements.txt` | Fichiers présents sur `main` |
 | 5 | Sanda | Compte-rendu de la séance 2, mise à jour du planning et du Trello (retards, nouvelles cartes), vérification des critères | `seance-02.md` poussé ; cartes Trello à jour |
 | 6 | Toute l'équipe | Une branche par carte, une Pull Request relue par un autre membre avant fusion | Plus aucun commit direct sur `main` |
 
 Les 2 h libres d'Omar en début de séance 3 sont à utiliser en priorité pour débloquer la chaîne de Maram.
+
+*Mise à jour du 23/10 (PO) : la sécurité (hachage des mots de passe, clé secrète) est reportée en fin de projet, sur une carte dédiée au sprint 4. La suppression de compte se fait avec une simple confirmation, sans redemander le mot de passe.*
