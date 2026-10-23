@@ -1,11 +1,18 @@
+{# Gabarit commun : toutes les pages l'étendent avec {% extends "base.html" %} #}
+{# Chaque page remplit les blocs "titre", "classe_body" et "contenu" #}
 <!DOCTYPE html>
 <html lang="fr">
 <head>
+    {# Encodage des caractères (accents) #}
     <meta charset="UTF-8">
+    {# Adapte la page à la largeur de l'écran (téléphone) #}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    {# Titre affiché dans l'onglet du navigateur, défini par chaque page #}
     <title>{% block titre %}Quiz{% endblock %}</title>
+    {# Feuille de style commune à toutes les pages #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
 </head>
+{# "page-large" pour les pages avec barre de navigation, vide pour connexion / inscription #}
 <body class="{% block classe_body %}{% endblock %}">
     {# Barre de navigation, seulement quand un utilisateur est connecté #}
     {% if session.utilisateur and request.endpoint not in ['login', 'inscription'] %}
@@ -19,6 +26,7 @@
         {% endfor %}
     {% endwith %}
 
+    {# Contenu propre à chaque page #}
     {% block contenu %}{% endblock %}
 </body>
 </html>

@@ -7,10 +7,7 @@
     <nav class="nav-liens" id="nav-liens">
         <a href="{{ url_for('accueil') }}" class="{{ 'actif' if request.endpoint in ['accueil', 'quiz'] }}">Accueil</a>
         <a href="{{ url_for('historique') }}" class="{{ 'actif' if request.endpoint == 'historique' }}">Historique</a>
-        {# Lien visible seulement pour l'administrateur #}
-        {% if session.utilisateur == 'admin' %}
-            <a href="{{ url_for('admin') }}" class="{{ 'actif' if request.endpoint == 'admin' }}">Admin</a>
-        {% endif %}
+        <a href="{{ url_for('importer_quiz') }}" class="{{ 'actif' if request.endpoint == 'importer_quiz' }}">Importer</a>
     </nav>
 
     {# Menu utilisateur : avatar avec l'initiale, s'ouvre au clic #}

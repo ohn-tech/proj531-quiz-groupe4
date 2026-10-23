@@ -7,7 +7,9 @@ import json
 # Module pour générer des codes de partage aléatoires et sûrs
 import secrets
 # Importe les outils Flask nécessaires
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
+# Lecture des quiz importés depuis un fichier texte, et vérification avant enregistrement
+from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX, NB_QUESTIONS_MAX
 
 # Crée l'application Flask
 app = Flask(__name__)
@@ -233,6 +235,31 @@ def trouver_quiz(quiz_id):
     return None
 
 
+# Caractères possibles pour un code de partage (sans 0, O, 1, I ni L, faciles à confondre)
+ALPHABET_CODE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+LONGUEUR_CODE = 6
+
+
+# Génère un code de partage aléatoire de 6 caractères, pas encore utilisé par un autre quiz
+def generer_code_partage():
+    while True:
+        code = "".join(secrets.choice(ALPHABET_CODE) for _ in range(LONGUEUR_CODE))
+        if get_db().execute("SELECT 1 FROM quizzes WHERE code_partage = ?", (code,)).fetchone() is None:
+            return code
+
+
+# Enregistre un quiz (créé sur le site ou importé) ; un quiz privé reçoit un code de partage
+def enregistrer_quiz(titre, description, duree, questions, visibilite, createur):
+    code_partage = generer_code_partage() if visibilite == "prive" else None
+    # Les questions sont converties en texte JSON
+    get_db().execute(
+        "INSERT INTO quizzes (titre, description, duree, questions, visibilite, createur, code_partage) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (titre, description, duree, json.dumps(questions, ensure_ascii=False), visibilite, createur, code_partage),
+    )
+    get_db().commit()
+
+
 # Route de la page de connexion (affichage et envoi du formulaire)
 @app.route("/login", methods=["GET", "POST"])
 def login():
@@ -377,25 +404,122 @@ def creer_quiz():
             "reponse": int(bonne_reponse),
         })
 
-    # Un quiz privé reçoit un code de partage aléatoire
-    code_partage = secrets.token_urlsafe(9) if visibilite == "prive" else None
-    # Enregistre le quiz, avec les questions converties en texte JSON
-    get_db().execute(
-        "INSERT INTO quizzes (titre, description, duree, questions, visibilite, createur, code_partage) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (
-            titre,
-            description,
-            int(duree),
-            json.dumps(questions, ensure_ascii=False),
-            visibilite,
-            session["utilisateur"],
-            code_partage,
-        ),
-    )
-    get_db().commit()
+    enregistrer_quiz(titre, description, int(duree), questions, visibilite, session["utilisateur"])
     flash("Votre quiz a été créé.", "succes")
     return redirect(url_for("accueil"))
+
+
+# Taille maximale d'un document envoyé pour générer un quiz (5 Mo)
+TAILLE_DOCUMENT_MAX = 5_000_000
+
+
+# Génération factice en attendant le vrai générateur (côté backend) :
+# renvoie des questions d'exemple pour pouvoir tester l'interface d'import.
+# À remplacer par la vraie génération à partir du texte du document.
+def generer_quiz_factice(nom_fichier, nb_questions):
+    titre = os.path.splitext(nom_fichier)[0].strip()[:100] or "Quiz généré"
+    questions = [
+        {
+            "texte": f"Question d'exemple n° {numero} (à remplacer par le vrai générateur)",
+            "choix": ["Bonne réponse", "Mauvaise réponse A", "Mauvaise réponse B", "Mauvaise réponse C"],
+            "reponse": 0,
+        }
+        for numero in range(1, nb_questions + 1)
+    ]
+    return {"titre": titre, "questions": questions}
+
+
+# Route de la page d'import (générer un quiz à partir d'un document, ou importer un quiz écrit)
+@app.route("/quiz/importer")
+def importer_quiz():
+    # Réservé aux utilisateurs connectés
+    if "utilisateur" not in session:
+        return redirect(url_for("login"))
+    return render_template("importer.html")
+
+
+# Analyse le fichier envoyé par la page d'import et renvoie le quiz en JSON, sans l'enregistrer
+@app.route("/quiz/importer/analyser", methods=["POST"])
+def analyser_import():
+    if "utilisateur" not in session:
+        return jsonify(erreurs=["Votre session a expiré. Reconnectez-vous puis recommencez."]), 401
+
+    fichier = request.files.get("fichier")
+    mode = request.form.get("mode")
+    if fichier is None or not fichier.filename:
+        return jsonify(erreurs=["Choisissez un fichier à importer."]), 400
+    extension = os.path.splitext(fichier.filename)[1].lower()
+
+    # Mode « quiz déjà écrit » : fichier texte au format QUIZ: / Q: / + / -
+    if mode == "quiz":
+        if extension != ".txt":
+            return jsonify(erreurs=["Un quiz déjà écrit doit être un fichier texte (.txt)."]), 400
+        # Un octet de plus que la limite pour détecter un fichier trop gros
+        quiz_lu, erreurs = lire_fichier(fichier.read(TAILLE_FICHIER_MAX + 1))
+        if erreurs:
+            return jsonify(erreurs=erreurs), 400
+        return jsonify(titre=quiz_lu["titre"], questions=quiz_lu["questions"], simule=False)
+
+    # Mode « document » : un cours en TXT ou PDF, à partir duquel on génère les questions
+    if mode == "document":
+        if extension not in {".txt", ".pdf"}:
+            return jsonify(erreurs=["Le document doit être un fichier TXT ou PDF."]), 400
+        nb_questions = request.form.get("nb_questions", "")
+        if not nb_questions.isdecimal() or not 1 <= int(nb_questions) <= NB_QUESTIONS_MAX:
+            return jsonify(erreurs=[f"Choisissez entre 1 et {NB_QUESTIONS_MAX} questions."]), 400
+
+        contenu = fichier.read(TAILLE_DOCUMENT_MAX + 1)
+        if not contenu:
+            return jsonify(erreurs=["Le fichier est vide."]), 400
+        if len(contenu) > TAILLE_DOCUMENT_MAX:
+            return jsonify(erreurs=["Le document est trop volumineux (5 Mo maximum)."]), 400
+        # Vérifie que le fichier est bien ce que son extension annonce
+        if extension == ".pdf" and not contenu.startswith(b"%PDF"):
+            return jsonify(erreurs=["Ce fichier n'est pas un PDF valide."]), 400
+        if extension == ".txt":
+            try:
+                contenu.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                return jsonify(erreurs=["Le fichier texte doit être encodé en UTF-8."]), 400
+
+        quiz_genere = generer_quiz_factice(fichier.filename, int(nb_questions))
+        return jsonify(titre=quiz_genere["titre"], questions=quiz_genere["questions"], simule=True)
+
+    return jsonify(erreurs=["Choisissez ce que vous voulez faire du fichier."]), 400
+
+
+# Enregistre le quiz relu et corrigé dans la page d'import (données envoyées en JSON)
+@app.route("/quiz/importer/enregistrer", methods=["POST"])
+def enregistrer_import():
+    if "utilisateur" not in session:
+        return jsonify(erreurs=["Votre session a expiré. Reconnectez-vous puis recommencez."]), 401
+
+    donnees = request.get_json(silent=True)
+    if not isinstance(donnees, dict):
+        return jsonify(erreurs=["Données invalides."]), 400
+
+    titre = donnees.get("titre")
+    visibilite = donnees.get("visibilite")
+    duree = donnees.get("duree")
+    questions, erreurs = verifier_quiz(titre, donnees.get("questions"))
+    if visibilite not in {"public", "prive"}:
+        erreurs.append("Choisissez une visibilité valide pour le quiz.")
+    if isinstance(duree, bool) or not isinstance(duree, int) or not 10 <= duree <= 3600:
+        erreurs.append("Le minuteur doit être compris entre 10 et 3600 secondes.")
+    if erreurs:
+        return jsonify(erreurs=erreurs), 400
+
+    enregistrer_quiz(
+        titre.strip(),
+        "Importé depuis un fichier.",
+        duree,
+        questions,
+        visibilite,
+        session["utilisateur"],
+    )
+    nb = len(questions)
+    flash(f"Le quiz « {titre.strip()} » a été enregistré ({nb} question{'s' if nb > 1 else ''}).", "succes")
+    return jsonify(redirection=url_for("accueil"))
 
 
 # Route pour rejoindre un quiz privé avec son code de partage
@@ -403,7 +527,8 @@ def creer_quiz():
 def rejoindre_quiz():
     # Si le formulaire a été envoyé
     if request.method == "POST":
-        code = request.form.get("code_partage", "").strip()
+        # Les codes sont en majuscules : on accepte aussi une saisie en minuscules
+        code = request.form.get("code_partage", "").strip().upper()
         # Cherche le quiz privé qui correspond au code
         quiz_prive = get_db().execute(
             "SELECT id FROM quizzes WHERE visibilite = 'prive' AND code_partage = ?",
@@ -474,18 +599,6 @@ def historique():
     if "utilisateur" not in session:
         return redirect(url_for("login"))
     return render_template("bientot.html", titre="Historique")
-
-
-# Route de l'espace administrateur (page à compléter)
-@app.route("/admin")
-def admin():
-    if "utilisateur" not in session:
-        return redirect(url_for("login"))
-    # Réservé au compte admin
-    if session["utilisateur"] != "admin":
-        flash("Accès réservé à l'administrateur.")
-        return redirect(url_for("accueil"))
-    return render_template("bientot.html", titre="Administration")
 
 
 # Route de déconnexion
