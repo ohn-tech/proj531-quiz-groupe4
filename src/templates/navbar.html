@@ -1,0 +1,36 @@
+{# Barre de navigation commune à toutes les pages connectées #}
+<header class="navbar">
+    {# Logo qui ramène à l'accueil #}
+    <a href="{{ url_for('accueil') }}" class="logo">QuizApp</a>
+
+    {# Liens de navigation : le lien de la page courante reçoit la classe "actif" #}
+    <nav class="nav-liens" id="nav-liens">
+        <a href="{{ url_for('accueil') }}" class="{{ 'actif' if request.endpoint in ['accueil', 'quiz'] }}">Accueil</a>
+        <a href="{{ url_for('historique') }}" class="{{ 'actif' if request.endpoint == 'historique' }}">Historique</a>
+        {# Lien visible seulement pour l'administrateur #}
+        {% if session.utilisateur == 'admin' %}
+            <a href="{{ url_for('admin') }}" class="{{ 'actif' if request.endpoint == 'admin' }}">Admin</a>
+        {% endif %}
+    </nav>
+
+    {# Menu utilisateur : avatar avec l'initiale, s'ouvre au clic #}
+    <details class="menu-utilisateur" id="menu-utilisateur">
+        <summary>
+            <span class="avatar">{{ session.utilisateur[0] | upper }}</span>
+            <span class="nom-utilisateur">{{ session.utilisateur }}</span>
+        </summary>
+        <div class="menu-deroulant">
+            <p>Connecté en tant que<br><strong>{{ session.utilisateur }}</strong></p>
+            <a href="{{ url_for('logout') }}">Déconnexion</a>
+            {% if request.endpoint == 'accueil' %}
+                <form method="POST" action="{{ url_for('supprimer_compte') }}" onsubmit="return confirm('Voulez-vous vraiment supprimer votre compte ? Cette action est définitive.');">
+                    <button type="submit" class="bouton-suppression-compte">Supprimer mon compte</button>
+                </form>
+            {% endif %}
+        </div>
+    </details>
+
+    {# Bouton menu, affiché seulement sur petit écran #}
+    <button type="button" class="nav-bouton" id="nav-bouton" aria-label="Menu" aria-expanded="false">☰</button>
+</header>
+<script src="{{ url_for('static', filename='js/navbar.js') }}"></script>

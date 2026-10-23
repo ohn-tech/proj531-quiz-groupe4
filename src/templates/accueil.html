@@ -1,10 +1,168 @@
-{# Hérite de la mise en page commune définie dans base.html #}
+{# Page d'accueil : liste des quiz disponibles et formulaire de création #}
 {% extends "base.html" %}
-{# Remplit le bloc "contenu" déclaré dans base.html #}
+{% block titre %}Accueil{% endblock %}
+{% block classe_body %}page-large{% endblock %}
+
 {% block contenu %}
-{# Titre principal qui salue l'utilisateur connecté par son nom #}
-<h1>Bienvenue {{ utilisateur }}</h1>
-{# Lien vers la route de déconnexion, URL générée par url_for de Flask #}
-<a href="{{ url_for('logout') }}">Se déconnecter</a>
-{# Fin du bloc "contenu" #}
+<main class="conteneur">
+    {# Le titre salue l'utilisateur s'il est connecté #}
+    <h1 class="titre-page">
+        {% if utilisateur %}Bonjour {{ utilisateur }}, quiz disponibles{% else %}Quiz publics disponibles{% endif %}
+    </h1>
+
+    {# Grille des quiz : une carte par quiz #}
+    {% if liste_quiz %}
+        <div class="grille-quiz">
+            {% for quiz in liste_quiz %}
+                <div class="carte-quiz">
+                    <h2>{{ quiz.titre }}</h2>
+                    <p class="description">{{ quiz.description }}</p>
+                    {# Badge de visibilité (absent pour les quiz factices) #}
+                    {% if quiz.visibilite == 'prive' %}
+                        <p class="badge-prive">Quiz privé</p>
+                    {% elif quiz.visibilite == 'public' %}
+                        <p class="badge-public">Quiz public</p>
+                    {% endif %}
+                    {# Nombre de questions (avec un "s" au pluriel) et durée du quiz #}
+                    <p class="nb-questions">{{ quiz.questions | length }} question{{ 's' if quiz.questions | length > 1 }} · ⏱ {{ quiz.duree }} s</p>
+                    <a href="{{ url_for('quiz', quiz_id=quiz.id) }}" class="btn-principal">Commencer</a>
+                    {# Code et lien de partage, visibles seulement par le créateur du quiz #}
+                    {% if quiz.code_partage %}
+                        <div class="infos-partage">
+                            <p>Code de partage : <strong>{{ quiz.code_partage }}</strong></p>
+                            {# Un clic sélectionne tout le lien pour le copier facilement #}
+                            <label>Lien privé
+                                <input type="text" value="{{ quiz.lien_partage }}" readonly onclick="this.select()">
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="vide">Aucun quiz disponible pour le moment.</p>
+    {% endif %}
+
+    {# Accès à un quiz privé avec son code de partage #}
+    <p class="rejoindre-lien"><a href="{{ url_for('rejoindre_quiz') }}">Rejoindre un quiz privé avec un code</a></p>
+
+    {# Formulaire de création, réservé aux utilisateurs connectés (géré par create-quiz.js) #}
+    {% if utilisateur %}
+        <details class="creation-quiz">
+            <summary>Créer un quiz</summary>
+            <form id="form-creation-quiz">
+                <p class="aide-formulaire">Les champs correspondent aux tables quizz, questions et answers. La sauvegarde sera reliée au backend.</p>
+
+                {# Informations générales du quiz (table quizz) #}
+                <label for="titre-quiz">Titre</label>
+                <input type="text" id="titre-quiz" name="title" maxlength="100" required>
+
+                <label for="description-quiz">Description</label>
+                <textarea id="description-quiz" name="description" maxlength="300" rows="3"></textarea>
+
+                <label for="subject-quiz">Sujet</label>
+                <input type="text" id="subject-quiz" name="subject" maxlength="100" required>
+
+                <label for="visibilite-quiz">Visibilité</label>
+                <select id="visibilite-quiz" name="is_public" required>
+                    <option value="1">Public — visible par tous</option>
+                    <option value="0">Privé — accès avec code/lien</option>
+                </select>
+
+                <label for="difficulty-quiz">Difficulté</label>
+                <select id="difficulty-quiz" name="difficulty" required>
+                    <option value="">Choisir une difficulté</option>
+                    <option value="Facile">Facile</option>
+                    <option value="Moyen">Moyen</option>
+                    <option value="Difficile">Difficile</option>
+                </select>
+
+                <label for="code-quiz">Code de partage</label>
+                <input type="text" id="code-quiz" name="code" autocomplete="off" required>
+
+                <label for="link-quiz">Lien de partage</label>
+                <input type="url" id="link-quiz" name="link" placeholder="https://..." required>
+
+                <label for="timer-quiz">Minuteur (secondes)</label>
+                <input type="number" id="timer-quiz" name="timer" min="10" max="3600" value="120" required>
+
+                {# Liste des questions : la première est affichée d'office, les autres sont ajoutées en JS #}
+                <div id="questions-quiz">
+                    <fieldset class="question-a-creer">
+                        <legend>Question 1</legend>
+                        <label>Question
+                            <input type="text" name="questions[0][question]" required>
+                        </label>
+                        <label>Points attribués
+                            <input type="number" name="questions[0][award]" min="0" value="1" required>
+                        </label>
+                        <div class="answers-for-question">
+                            <p class="label-reponses">Réponses — cochez toutes les bonnes réponses</p>
+                            {# Chaque réponse : case "bonne réponse", texte, bouton de suppression #}
+                            <div class="answer-option">
+                                <input type="checkbox" name="questions[0][answers][0][is_correct]" value="1" aria-label="Marquer la réponse 1 comme correcte">
+                                <input type="text" name="questions[0][answers][0][answer]" aria-label="Réponse 1" placeholder="Réponse 1" required>
+                                <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 1" hidden>×</button>
+                            </div>
+                            <div class="answer-option">
+                                <input type="checkbox" name="questions[0][answers][1][is_correct]" value="1" aria-label="Marquer la réponse 2 comme correcte">
+                                <input type="text" name="questions[0][answers][1][answer]" aria-label="Réponse 2" placeholder="Réponse 2" required>
+                                <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 2" hidden>×</button>
+                            </div>
+                        </div>
+                        <button type="button" class="ajouter-reponse bouton-secondaire">Ajouter une réponse</button>
+                        <button type="button" class="supprimer-question bouton-danger" hidden>Supprimer cette question</button>
+                    </fieldset>
+                </div>
+
+                <button type="button" id="ajouter-question" class="bouton-secondaire">Ajouter une question</button>
+                <button type="submit">Préparer le quiz</button>
+                {# Zone de message lue par les lecteurs d'écran (aria-live) #}
+                <p id="quiz-form-status" class="aide-formulaire" role="status" aria-live="polite"></p>
+            </form>
+        </details>
+    {# Visiteur non connecté : invitation à se connecter #}
+    {% else %}
+        <p class="connexion-creation"><a class="btn-principal" href="{{ url_for('login') }}">Connectez-vous pour créer un quiz</a></p>
+    {% endif %}
+
+    {# Modèles invisibles copiés par create-quiz.js pour ajouter une question ou une réponse #}
+    <template id="modele-question">
+        <fieldset class="question-a-creer">
+            <legend>Question</legend>
+            <label>Question
+                <input type="text" data-field="question" required>
+            </label>
+            <label>Points attribués
+                <input type="number" data-field="award" min="0" value="1" required>
+            </label>
+            <div class="answers-for-question">
+                <p class="label-reponses">Réponses — cochez toutes les bonnes réponses</p>
+                <div class="answer-option">
+                    <input type="checkbox" data-correct-answer value="0">
+                    <input type="text" data-answer aria-label="Réponse 1" placeholder="Réponse 1" required>
+                    <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 1" hidden>×</button>
+                </div>
+                <div class="answer-option">
+                    <input type="checkbox" data-correct-answer value="1">
+                    <input type="text" data-answer aria-label="Réponse 2" placeholder="Réponse 2" required>
+                    <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 2" hidden>×</button>
+                </div>
+            </div>
+            <button type="button" class="ajouter-reponse bouton-secondaire">Ajouter une réponse</button>
+            <button type="button" class="supprimer-question bouton-danger">Supprimer cette question</button>
+        </fieldset>
+    </template>
+    <template id="modele-reponse">
+        <div class="answer-option">
+            <input type="checkbox" data-correct-answer>
+            <input type="text" data-answer required>
+            <button type="button" class="supprimer-reponse" aria-label="Supprimer cette réponse">×</button>
+        </div>
+    </template>
+</main>
+{# Le script de création n'est chargé que si le formulaire est présent #}
+{% if utilisateur %}
+    <script src="{{ url_for('static', filename='js/create-quiz.js') }}"></script>
+{% endif %}
 {% endblock %}

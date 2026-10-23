@@ -1,0 +1,53 @@
+{# Page d'un quiz : affiche les questions, puis le résultat une fois validé #}
+{% extends "base.html" %}
+{% block titre %}{{ quiz.titre }}{% endblock %}
+{% block classe_body %}page-large{% endblock %}
+
+{% block contenu %}
+<main class="conteneur conteneur-etroit">
+    {# Titre du quiz et minuteur (la durée est lue par quiz.js) #}
+    <div class="quiz-entete">
+        <h1 class="titre-page">{{ quiz.titre }}</h1>
+        <div class="minuteur" id="minuteur" data-duree="{{ quiz.duree }}">
+            <span class="minuteur-icone">⏱</span>
+            <span id="minuteur-temps">--:--</span>
+        </div>
+    </div>
+    {# Barre qui se vide au fil du temps #}
+    <div class="barre-temps"><div class="barre-temps-remplie" id="barre-temps"></div></div>
+
+    {# Quiz terminé par un visiteur non connecté : on affiche le score sur la page #}
+    {% if resultat %}
+        <p class="succes">{{ resultat }}</p>
+        <a href="{{ url_for('accueil') if session.utilisateur else url_for('login') }}" class="btn-principal">
+            {{ "Retour à l'accueil" if session.utilisateur else "Retour à la connexion" }}
+        </a>
+    {% else %}
+        {# Formulaire des réponses : un groupe de boutons radio par question #}
+        <form method="POST" id="form-quiz">
+            {% for question in quiz.questions %}
+                {# Garde l'indice de la question pour nommer ses choix (q0, q1, ...) #}
+                {% set num_question = loop.index0 %}
+                <fieldset class="carte-question">
+                    <legend>Question {{ loop.index }} / {{ quiz.questions | length }}</legend>
+                    <p class="question-texte">{{ question.texte }}</p>
+                    {# La valeur envoyée est l'indice du choix, comparé à "reponse" côté serveur #}
+                    {% for choix in question.choix %}
+                        <label class="choix">
+                            <input type="radio" name="q{{ num_question }}" value="{{ loop.index0 }}">
+                            <span>{{ choix }}</span>
+                        </label>
+                    {% endfor %}
+                </fieldset>
+            {% endfor %}
+            {# Passe à 1 quand le minuteur envoie le formulaire tout seul #}
+            <input type="hidden" name="temps_ecoule" id="temps-ecoule" value="0">
+            <button type="submit">Valider mes réponses</button>
+        </form>
+    {% endif %}
+</main>
+{# Le minuteur ne sert que tant que le quiz n'est pas terminé #}
+{% if not resultat %}
+    <script src="{{ url_for('static', filename='js/quiz.js') }}"></script>
+{% endif %}
+{% endblock %}

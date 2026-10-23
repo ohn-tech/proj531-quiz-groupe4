@@ -1,239 +1,759 @@
-/* Importe la police Poppins depuis Google Fonts (graisses 400, 500, 600) */
 @import url("https://fonts.googleapis.com/css2?family=Poppins:wght@400;500;600&display=swap");
 
-/* Variables globales réutilisables dans tout le fichier */
 :root {
-    /* Couleur principale (violet) */
     --primaire: #6366f1;
-    /* Couleur principale plus foncée (survol) */
     --primaire-fonce: #4f46e5;
-    /* Couleur du texte principal */
     --texte: #1f2937;
-    /* Couleur du texte secondaire (gris) */
     --texte-doux: #6b7280;
-    /* Couleur des bordures */
     --bordure: #e5e7eb;
-    /* Couleur du texte d'erreur (rouge) */
     --erreur: #dc2626;
-    /* Couleur de fond des messages d'erreur */
     --erreur-fond: #fef2f2;
-    /* Rayon d'arrondi des coins */
     --rayon: 12px;
 }
 
-/* Sélectionne tous les éléments */
 * {
-    /* La largeur inclut le padding et la bordure */
     box-sizing: border-box;
 }
 
-/* Corps de la page */
 body {
-    /* Police Poppins, sinon police sans empattement */
     font-family: "Poppins", sans-serif;
-    /* Couleur du texte par défaut */
     color: var(--texte);
-    /* Supprime la marge par défaut du navigateur */
     margin: 0;
-    /* Occupe au moins toute la hauteur de l'écran */
     min-height: 100vh;
-    /* Active la mise en page flexbox */
     display: flex;
-    /* Empile les éléments verticalement */
     flex-direction: column;
-    /* Centre horizontalement */
     align-items: center;
-    /* Centre verticalement */
     justify-content: center;
-    /* Espace intérieur autour du contenu */
     padding: 1rem;
-    /* Fond en dégradé diagonal bleu-violet */
     background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
 }
 
-/* Carte centrale */
+/* ---------- Carte centrale (connexion / inscription) ---------- */
 .carte {
-    /* Fond blanc */
     background: #ffffff;
-    /* Prend toute la largeur disponible */
     width: 100%;
-    /* ... sans dépasser 380px */
     max-width: 380px;
-    /* Espace intérieur (haut/bas, gauche/droite) */
     padding: 2.5rem 2rem;
-    /* Coins arrondis */
     border-radius: var(--rayon);
-    /* Ombre portée douce */
     box-shadow: 0 20px 40px rgba(0, 0, 0, 0.15);
-    /* Animation d'apparition au chargement */
     animation: apparition 0.4s ease-out;
 }
 
-/* Définition de l'animation d'apparition */
 @keyframes apparition {
-    /* Départ : invisible et décalé de 15px vers le bas */
     from { opacity: 0; transform: translateY(15px); }
-    /* Arrivée : visible et à sa position normale */
     to   { opacity: 1; transform: translateY(0); }
 }
 
-/* Titres principaux */
 h1 {
-    /* Marge uniquement en bas */
     margin: 0 0 1.5rem;
-    /* Taille du texte */
     font-size: 1.6rem;
-    /* Texte semi-gras */
     font-weight: 600;
-    /* Texte centré */
     text-align: center;
 }
 
-/* Formulaire */
+/* ---------- Formulaires ---------- */
 form {
-    /* Active flexbox */
     display: flex;
-    /* Champs empilés verticalement */
     flex-direction: column;
 }
 
-/* Libellés des champs */
 label {
-    /* Petite taille de texte */
     font-size: 0.85rem;
-    /* Graisse moyenne */
     font-weight: 500;
-    /* Couleur grise */
     color: var(--texte-doux);
-    /* Petit espace sous le libellé */
     margin-bottom: 0.35rem;
 }
 
-/* Champs de saisie */
-input {
-    /* Même police que le reste de la page */
+input,
+textarea,
+select {
     font-family: inherit;
-    /* Taille du texte saisi */
     font-size: 0.95rem;
-    /* Espace intérieur */
     padding: 0.75rem 0.9rem;
-    /* Espace sous chaque champ */
     margin-bottom: 1.1rem;
-    /* Bordure grise fine */
     border: 1.5px solid var(--bordure);
-    /* Coins arrondis */
     border-radius: 8px;
-    /* Supprime le contour par défaut au focus */
     outline: none;
-    /* Transition douce de la bordure et de l'ombre */
     transition: border-color 0.2s, box-shadow 0.2s;
 }
 
-/* Champ de saisie sélectionné */
-input:focus {
-    /* Bordure de couleur principale */
+input:focus,
+textarea:focus,
+select:focus {
     border-color: var(--primaire);
-    /* Halo violet léger autour du champ */
     box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.2);
 }
 
-/* Boutons */
+textarea {
+    resize: vertical;
+}
+
 button {
-    /* Même police que le reste de la page */
     font-family: inherit;
-    /* Taille du texte */
     font-size: 1rem;
-    /* Graisse moyenne */
     font-weight: 500;
-    /* Espace intérieur */
     padding: 0.8rem;
-    /* Petit espace au-dessus */
     margin-top: 0.4rem;
-    /* Texte blanc */
     color: #ffffff;
-    /* Fond de couleur principale */
     background: var(--primaire);
-    /* Pas de bordure */
     border: none;
-    /* Coins arrondis */
     border-radius: 8px;
-    /* Curseur en forme de main */
     cursor: pointer;
-    /* Transition douce du fond et du zoom */
     transition: background 0.2s, transform 0.1s;
 }
 
-/* Bouton survolé */
 button:hover {
-    /* Fond plus foncé */
     background: var(--primaire-fonce);
 }
 
-/* Bouton pendant le clic */
 button:active {
-    /* Légère réduction pour un effet d'appui */
     transform: scale(0.98);
 }
 
-/* Liens et texte secondaire */
 .carte p {
-    /* Espace au-dessus du paragraphe */
     margin: 1.5rem 0 0;
-    /* Texte plus petit */
     font-size: 0.9rem;
-    /* Texte centré */
     text-align: center;
-    /* Couleur grise */
     color: var(--texte-doux);
 }
 
-/* Liens */
 a {
-    /* Couleur principale */
     color: var(--primaire);
-    /* Graisse moyenne */
     font-weight: 500;
-    /* Pas de soulignement */
     text-decoration: none;
 }
 
-/* Lien survolé */
 a:hover {
-    /* Souligné au survol */
     text-decoration: underline;
 }
 
-/* Message d'erreur */
+/* ---------- Message d'erreur ---------- */
 .erreur {
-    /* Prend toute la largeur disponible */
     width: 100%;
-    /* ... alignée sur la largeur de la carte */
     max-width: 380px;
-    /* Espace sous le message */
     margin: 0 0 1rem;
-    /* Espace intérieur */
     padding: 0.75rem 1rem;
-    /* Texte plus petit */
     font-size: 0.9rem;
-    /* Texte rouge */
     color: var(--erreur);
-    /* Fond rouge très clair */
     background: var(--erreur-fond);
-    /* Barre rouge à gauche */
     border-left: 4px solid var(--erreur);
-    /* Coins arrondis */
     border-radius: 8px;
 }
 
-/* Page d'accueil (temporaire) */
-/* Titre placé directement dans le body */
-body > h1 {
-    /* Texte blanc sur le fond dégradé */
+/* ---------- Pages larges (accueil, etc.) ---------- */
+body.page-large {
+    justify-content: flex-start;
+    padding: 0;
+}
+
+/* ---------- Barre de navigation ---------- */
+.navbar {
+    position: sticky;
+    top: 0;
+    z-index: 10;
+    width: 100%;
+    display: flex;
+    align-items: center;
+    gap: 2rem;
+    padding: 0.8rem 2rem;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+    backdrop-filter: blur(8px);
+    box-shadow: 0 1px 0 rgba(255, 255, 255, 0.15);
+}
+
+.logo {
+    font-size: 1.3rem;
+    font-weight: 600;
     color: #ffffff;
 }
 
-/* Lien placé directement dans le body */
-body > a {
-    /* Texte blanc sur le fond dégradé */
+.logo:hover {
+    text-decoration: none;
+}
+
+.nav-liens {
+    display: flex;
+    flex-grow: 1;
+    gap: 0.5rem;
+}
+
+.nav-liens a {
+    padding: 0.45rem 0.9rem;
+    color: rgba(255, 255, 255, 0.85);
+    border-radius: 8px;
+    transition: background 0.2s, color 0.2s;
+}
+
+.nav-liens a:hover {
+    text-decoration: none;
     color: #ffffff;
+    background: rgba(255, 255, 255, 0.12);
+}
+
+/* Lien de la page courante */
+.nav-liens a.actif {
+    color: var(--primaire-fonce);
+    background: #ffffff;
+}
+
+/* Menu utilisateur (avatar + menu déroulant) */
+.menu-utilisateur {
+    position: relative;
+}
+
+.menu-utilisateur summary {
+    display: flex;
+    align-items: center;
+    gap: 0.6rem;
+    padding: 0.3rem 0.8rem 0.3rem 0.3rem;
+    list-style: none;
+    border-radius: 999px;
+    cursor: pointer;
+    transition: background 0.2s;
+}
+
+.menu-utilisateur summary::-webkit-details-marker {
+    display: none;
+}
+
+.menu-utilisateur summary:hover,
+.menu-utilisateur[open] summary {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.avatar {
+    width: 2.1rem;
+    height: 2.1rem;
+    display: grid;
+    place-items: center;
+    font-weight: 600;
+    color: var(--primaire-fonce);
+    background: #ffffff;
+    border-radius: 50%;
+}
+
+.menu-deroulant {
+    position: absolute;
+    top: calc(100% + 0.5rem);
+    right: 0;
+    min-width: 200px;
+    padding: 1rem;
+    color: var(--texte);
+    background: #ffffff;
+    border-radius: var(--rayon);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+    animation: apparition 0.2s ease-out;
+}
+
+.menu-deroulant p {
+    margin: 0 0 0.8rem;
+    font-size: 0.85rem;
+    color: var(--texte-doux);
+}
+
+.menu-deroulant strong {
+    color: var(--texte);
+}
+
+.menu-deroulant a {
+    display: block;
+    padding: 0.5rem 0.7rem;
+    color: var(--erreur);
+    border-radius: 8px;
+}
+
+.menu-deroulant a:hover {
+    text-decoration: none;
+    background: var(--erreur-fond);
+}
+
+.bouton-suppression-compte {
+    width: 100%;
+    margin-top: 0.35rem;
+    padding: 0.5rem 0.7rem;
+    color: var(--erreur);
+    text-align: left;
+    background: transparent;
+    border-radius: 8px;
+}
+
+.bouton-suppression-compte:hover {
+    background: var(--erreur-fond);
+}
+
+/* Bouton ☰, caché sur grand écran */
+.nav-bouton {
+    display: none;
+    margin: 0;
+    padding: 0.3rem 0.7rem;
+    font-size: 1.3rem;
+    line-height: 1;
+    background: transparent;
+    border: 1.5px solid rgba(255, 255, 255, 0.7);
+}
+
+.nav-bouton:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+/* Petit écran : liens repliés sous le bouton ☰ */
+@media (max-width: 640px) {
+    .navbar {
+        flex-wrap: wrap;
+        gap: 0.8rem;
+        padding: 0.8rem 1rem;
+    }
+
+    .logo {
+        flex-grow: 1;
+    }
+
+    .nav-liens {
+        display: none;
+        order: 3;
+        width: 100%;
+        flex-direction: column;
+    }
+
+    .nav-liens.ouvert {
+        display: flex;
+    }
+
+    .nav-bouton {
+        display: block;
+    }
+
+    .nom-utilisateur {
+        display: none;
+    }
+}
+
+.btn-secondaire {
+    padding: 0.45rem 1rem;
+    color: #ffffff;
+    border: 1.5px solid rgba(255, 255, 255, 0.7);
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.btn-secondaire:hover {
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.conteneur {
+    width: 100%;
+    max-width: 1000px;
+    padding: 2.5rem 1.5rem;
+}
+
+.titre-page {
+    color: #ffffff;
+    text-align: left;
+}
+
+/* ---------- Grille des quiz ---------- */
+.grille-quiz {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
+    gap: 1.5rem;
+}
+
+.carte-quiz {
+    display: flex;
+    flex-direction: column;
+    padding: 1.5rem;
+    background: #ffffff;
+    border-radius: var(--rayon);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    animation: apparition 0.4s ease-out;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.carte-quiz:hover {
+    transform: translateY(-4px);
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+}
+
+.carte-quiz h2 {
+    margin: 0 0 0.5rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.badge-public,
+.badge-prive {
+    align-self: flex-start;
+    margin: 0 0 0.75rem;
+    padding: 0.2rem 0.65rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+.badge-public {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.badge-prive {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.infos-partage {
+    margin-top: 1rem;
+    padding-top: 0.75rem;
+    border-top: 1px solid var(--bordure);
+}
+
+.infos-partage p {
+    margin: 0 0 0.5rem;
+    font-size: 0.85rem;
+}
+
+.infos-partage label {
+    display: block;
+}
+
+.infos-partage input {
+    width: 100%;
+    margin: 0;
+    font-size: 0.8rem;
+}
+
+.description {
+    flex-grow: 1;
+    margin: 0 0 1rem;
+    font-size: 0.9rem;
+    color: var(--texte-doux);
+}
+
+.nb-questions {
+    margin: 0 0 1rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--primaire);
+}
+
+.btn-principal {
+    padding: 0.7rem;
+    text-align: center;
+    color: #ffffff;
+    background: var(--primaire);
+    border-radius: 8px;
+    transition: background 0.2s;
+}
+
+.btn-principal:hover {
+    text-decoration: none;
+    background: var(--primaire-fonce);
+}
+
+.vide {
+    color: #ffffff;
+    text-align: center;
+}
+
+.rejoindre-lien {
+    margin: 1.5rem 0;
+    text-align: right;
+}
+
+.connexion-creation {
+    margin-top: 1.5rem;
+    text-align: center;
+}
+
+.creation-quiz {
+    margin-top: 2rem;
+    padding: 1.5rem;
+    background: #ffffff;
+    border-radius: var(--rayon);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.creation-quiz > summary {
+    color: var(--primaire-fonce);
+    font-size: 1.1rem;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.creation-quiz[open] > summary {
+    margin-bottom: 1.25rem;
+}
+
+.creation-quiz form {
+    gap: 0.25rem;
+}
+
+.question-a-creer {
+    min-width: 0;
+    margin: 1rem 0;
+    padding: 1rem;
+    border: 1px solid var(--bordure);
+    border-radius: 8px;
+}
+
+.question-a-creer legend {
+    padding: 0 0.4rem;
+    color: var(--primaire-fonce);
+    font-weight: 600;
+}
+
+.question-a-creer label {
+    display: flex;
+    flex-direction: column;
+}
+
+.question-a-creer .label-reponses {
+    margin: 0 0 0.5rem;
+    color: var(--texte-doux);
+    font-size: 0.85rem;
+}
+
+.answers-for-question {
+    display: grid;
+    gap: 0.5rem;
+    margin: 0.75rem 0;
+}
+
+.answer-option {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.25rem 0.5rem;
+    border: 2px solid var(--bordure);
+    border-radius: 8px;
+    transition: background 0.15s, border-color 0.15s;
+}
+
+.answer-option.is-correct {
+    background: #f0fdf4;
+    border-color: #16a34a;
+}
+
+.answer-option.is-incorrect {
+    background: var(--erreur-fond);
+    border-color: var(--erreur);
+}
+
+.answer-option input[type="checkbox"] {
+    width: 1.15rem;
+    height: 1.15rem;
+    flex: 0 0 auto;
+    margin: 0 0 0 0.25rem;
+    accent-color: #15803d;
+}
+
+.answer-option input[type="text"] {
+    flex: 1;
+    min-width: 0;
+    margin: 0;
+    border: 0;
+    background: transparent;
+    box-shadow: none;
+}
+
+.answer-option.is-correct input[type="text"] {
+    color: #166534;
+}
+
+.answer-option.is-incorrect input[type="text"] {
+    color: #991b1b;
+}
+
+.supprimer-reponse {
+    width: 2rem;
+    height: 2rem;
+    flex: 0 0 auto;
+    padding: 0;
+    margin: 0;
+    color: var(--erreur);
+    background: transparent;
+    font-size: 1.2rem;
+}
+
+.supprimer-reponse:hover {
+    background: var(--erreur-fond);
+}
+
+.bouton-danger {
+    background: var(--erreur);
+}
+
+.bouton-danger:hover {
+    background: #b91c1c;
+}
+
+.aide-formulaire {
+    color: var(--texte-doux);
+    font-size: 0.85rem;
+}
+
+.creation-quiz button:disabled {
+    opacity: 0.55;
+    cursor: not-allowed;
+}
+
+.bouton-secondaire {
+    color: var(--primaire-fonce);
+    background: #eef2ff;
+}
+
+.bouton-secondaire:hover {
+    background: #e0e7ff;
+}
+
+/* ---------- Message de succès ---------- */
+.succes {
+    width: 100%;
+    max-width: 380px;
+    margin: 0 0 1rem;
+    padding: 0.75rem 1rem;
+    font-size: 0.9rem;
+    color: #15803d;
+    background: #f0fdf4;
+    border-left: 4px solid #16a34a;
+    border-radius: 8px;
+}
+
+/* Sur les pages larges, les messages s'alignent sous la barre de navigation */
+body.page-large .erreur,
+body.page-large .succes {
+    width: calc(100% - 3rem);
+    max-width: 952px;
+    margin: 1.5rem 0 0;
+}
+
+/* ---------- Page d'un quiz ---------- */
+.conteneur-etroit {
+    max-width: 720px;
+}
+
+.quiz-entete {
+    display: flex;
+    flex-wrap: wrap;
+    justify-content: space-between;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.quiz-entete .titre-page {
+    margin: 0;
+}
+
+/* Minuteur */
+.minuteur {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    padding: 0.5rem 1rem;
+    font-size: 1.2rem;
+    font-weight: 600;
+    font-variant-numeric: tabular-nums;
+    color: var(--primaire-fonce);
+    background: #ffffff;
+    border-radius: 999px;
+    box-shadow: 0 6px 16px rgba(0, 0, 0, 0.12);
+    transition: color 0.3s, background 0.3s;
+}
+
+/* 10 dernières secondes : rouge et pulsation */
+.minuteur.urgent {
+    color: #ffffff;
+    background: var(--erreur);
+    animation: pulsation 1s ease-in-out infinite;
+}
+
+@keyframes pulsation {
+    0%, 100% { transform: scale(1); }
+    50%      { transform: scale(1.06); }
+}
+
+.barre-temps {
+    height: 6px;
+    margin-bottom: 1.5rem;
+    overflow: hidden;
+    background: rgba(255, 255, 255, 0.25);
+    border-radius: 999px;
+}
+
+.barre-temps-remplie {
+    width: 100%;
+    height: 100%;
+    background: #ffffff;
+    border-radius: 999px;
+    transition: width 0.25s linear, background 0.3s;
+}
+
+.barre-temps-remplie.urgent {
+    background: #fca5a5;
+}
+
+/* Questions */
+.carte-question {
+    margin: 0 0 1.2rem;
+    padding: 1.5rem;
+    background: #ffffff;
+    border: none;
+    border-radius: var(--rayon);
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    animation: apparition 0.4s ease-out;
+}
+
+.carte-question legend {
+    float: left;
+    width: 100%;
+    padding: 0;
+    margin-bottom: 0.4rem;
+    font-size: 0.8rem;
+    font-weight: 500;
+    color: var(--primaire);
+}
+
+.question-texte {
+    clear: both;
+    margin: 0 0 1rem;
+    font-size: 1.05rem;
+    font-weight: 500;
+}
+
+.choix {
+    display: flex;
+    align-items: center;
+    gap: 0.7rem;
+    margin: 0 0 0.6rem;
+    padding: 0.75rem 0.9rem;
+    font-size: 0.95rem;
+    color: var(--texte);
+    border: 1.5px solid var(--bordure);
+    border-radius: 8px;
+    cursor: pointer;
+    transition: border-color 0.2s, background 0.2s;
+}
+
+.choix:hover {
+    border-color: var(--primaire);
+}
+
+.choix input {
+    width: 1.1rem;
+    height: 1.1rem;
+    margin: 0;
+    padding: 0;
+    accent-color: var(--primaire);
+}
+
+.choix input:focus {
+    box-shadow: none;
+}
+
+/* Choix sélectionné */
+.choix:has(input:checked) {
+    border-color: var(--primaire);
+    background: rgba(99, 102, 241, 0.08);
 }

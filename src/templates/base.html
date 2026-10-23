@@ -1,35 +1,24 @@
-{# Déclare le document comme HTML5 #}
 <!DOCTYPE html>
-{# Élément racine, langue de la page : français #}
 <html lang="fr">
-{# En-tête : métadonnées et ressources de la page #}
 <head>
-    {# Encodage des caractères en UTF-8 (accents, etc.) #}
     <meta charset="UTF-8">
-    {# Adapte l'affichage à la largeur de l'écran (mobiles) #}
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    {# Titre de l'onglet, "Quiz" par défaut, remplaçable par les pages enfants #}
     <title>{% block titre %}Quiz{% endblock %}</title>
-    {# Lien vers la feuille de style, URL générée par url_for de Flask #}
     <link rel="stylesheet" href="{{ url_for('static', filename='css/style.css') }}">
-{# Fin de l'en-tête #}
 </head>
-{# Corps : contenu visible de la page #}
-<body>
-    {# Récupère les messages flash envoyés par Flask (erreurs, etc.) #}
-    {% with messages = get_flashed_messages() %}
-        {# Parcourt chaque message #}
-        {% for message in messages %}
-            {# Affiche le message avec le style "erreur" #}
-            <p class="erreur">{{ message }}</p>
-        {# Fin de la boucle #}
+<body class="{% block classe_body %}{% endblock %}">
+    {# Barre de navigation, seulement quand un utilisateur est connecté #}
+    {% if session.utilisateur and request.endpoint not in ['login', 'inscription'] %}
+        {% include "navbar.html" %}
+    {% endif %}
+
+    {# Messages : en vert pour la catégorie "succes", en rouge sinon #}
+    {% with messages = get_flashed_messages(with_categories=true) %}
+        {% for categorie, message in messages %}
+            <p class="{{ 'succes' if categorie == 'succes' else 'erreur' }}">{{ message }}</p>
         {% endfor %}
-    {# Fin du bloc with #}
     {% endwith %}
 
-    {# Emplacement du contenu propre à chaque page enfant #}
     {% block contenu %}{% endblock %}
-{# Fin du corps #}
 </body>
-{# Fin du document #}
 </html>
