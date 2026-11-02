@@ -17,15 +17,17 @@
                 <div class="carte-quiz">
                     <h2>{{ quiz.titre }}</h2>
                     <p class="description">{{ quiz.description }}</p>
-                    {# Badge de visibilité (absent pour les quiz factices) #}
-                    {% if quiz.visibilite == 'prive' %}
+                    {# Badge de visibilité : is_public vaut 1 (public) ou 0 (privé), absent pour les quiz factices #}
+                    {% if quiz.visibilite == 0 %}
                         <p class="badge-prive">Quiz privé</p>
-                    {% elif quiz.visibilite == 'public' %}
+                    {% elif quiz.visibilite == 1 %}
                         <p class="badge-public">Quiz public</p>
                     {% endif %}
                     {# Nombre de questions (avec un "s" au pluriel) et durée du quiz #}
-                    <p class="nb-questions">{{ quiz.questions | length }} question{{ 's' if quiz.questions | length > 1 }} · ⏱ {{ quiz.duree }} s</p>
-                    <a href="{{ url_for('quiz', quiz_id=quiz.id) }}" class="btn-principal">Commencer</a>
+                    {# Quiz de la base : nb_questions ; quiz factices : longueur de la liste questions #}
+                    {% set nb = quiz.nb_questions if quiz.nb_questions is defined else quiz.questions | length %}
+                    <p class="nb-questions">{{ nb }} question{{ 's' if nb > 1 }} · ⏱ {{ quiz.duree }} s</p>
+                    <a href="{{ url_for('quizz_route', quiz_id=quiz.id) }}" class="btn-principal">Commencer</a>
                     {# Code et lien de partage, visibles seulement par le créateur du quiz #}
                     {% if quiz.code_partage %}
                         <div class="infos-partage">

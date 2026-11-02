@@ -246,7 +246,9 @@ def accueil():
     utilisateur = session.get("utilisateur")
     db = get_db()
     quizz_crees = db.execute(
-        "SELECT id_quizz, title, description, timer, is_public, login_creator, code "
+        # nb_questions : nombre de questions du quiz, compté dans la table questions
+        "SELECT id_quizz, title, description, timer, is_public, login_creator, code, "
+        "(SELECT COUNT(*) FROM questions WHERE questions.id_quizz = quizz.id_quizz) AS nb_questions "
         "FROM quizz WHERE is_public = 1 OR login_creator = ? ORDER BY id_quizz DESC",
         (utilisateur,),
     ).fetchall()
@@ -257,6 +259,7 @@ def accueil():
             "titre": q["title"],
             "description": q["description"],
             "duree": q["timer"],
+            "nb_questions": q["nb_questions"],
             "visibilite": q["is_public"],
             "code_partage": q["code"] if q["login_creator"] == utilisateur else None,
             "lien_partage": url_for(
@@ -376,7 +379,7 @@ def quizz_route(quiz_id):
         flash(message, "succes")
         return redirect(url_for("accueil"))
 
-    return render_template("quiz.html", quizz=quizz)
+    return render_template("quiz.html", quiz=quizz)
 
 @app.route("/historique")
 def historique():
