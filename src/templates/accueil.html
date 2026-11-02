@@ -91,22 +91,22 @@
                     <fieldset class="question-a-creer">
                         <legend>Question 1</legend>
                         <label>Question
-                            <input type="text" name="questions[0][question]" required>
+                            <input type="text" name="questions[0][question]" data-field="question" required>
                         </label>
                         <label>Points attribués
-                            <input type="number" name="questions[0][award]" min="0" value="1" required>
+                            <input type="number" name="questions[0][award]" data-field="award" min="0" value="1" required>
                         </label>
                         <div class="answers-for-question">
-                            <p class="label-reponses">Réponses — cochez toutes les bonnes réponses</p>
-                            {# Chaque réponse : case "bonne réponse", texte, bouton de suppression #}
+                            <p class="label-reponses">Réponses (2 à 6) — cochez la bonne réponse</p>
+                            {# Chaque réponse : bouton radio "bonne réponse" (une seule par question), texte, bouton de suppression #}
                             <div class="answer-option">
-                                <input type="checkbox" name="questions[0][answers][0][is_correct]" value="1" aria-label="Marquer la réponse 1 comme correcte">
-                                <input type="text" name="questions[0][answers][0][answer]" aria-label="Réponse 1" placeholder="Réponse 1" required>
+                                <input type="radio" name="questions[0][correct]" value="0" data-correct-answer aria-label="Marquer la réponse 1 comme correcte" required>
+                                <input type="text" name="questions[0][answers][0][answer]" data-answer aria-label="Réponse 1" placeholder="Réponse 1" required>
                                 <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 1" hidden>×</button>
                             </div>
                             <div class="answer-option">
-                                <input type="checkbox" name="questions[0][answers][1][is_correct]" value="1" aria-label="Marquer la réponse 2 comme correcte">
-                                <input type="text" name="questions[0][answers][1][answer]" aria-label="Réponse 2" placeholder="Réponse 2" required>
+                                <input type="radio" name="questions[0][correct]" value="1" data-correct-answer aria-label="Marquer la réponse 2 comme correcte" required>
+                                <input type="text" name="questions[0][answers][1][answer]" data-answer aria-label="Réponse 2" placeholder="Réponse 2" required>
                                 <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 2" hidden>×</button>
                             </div>
                         </div>
@@ -137,14 +137,14 @@
                 <input type="number" data-field="award" min="0" value="1" required>
             </label>
             <div class="answers-for-question">
-                <p class="label-reponses">Réponses — cochez toutes les bonnes réponses</p>
+                <p class="label-reponses">Réponses (2 à 6) — cochez la bonne réponse</p>
                 <div class="answer-option">
-                    <input type="checkbox" data-correct-answer value="0">
+                    <input type="radio" data-correct-answer required>
                     <input type="text" data-answer aria-label="Réponse 1" placeholder="Réponse 1" required>
                     <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 1" hidden>×</button>
                 </div>
                 <div class="answer-option">
-                    <input type="checkbox" data-correct-answer value="1">
+                    <input type="radio" data-correct-answer required>
                     <input type="text" data-answer aria-label="Réponse 2" placeholder="Réponse 2" required>
                     <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 2" hidden>×</button>
                 </div>
@@ -155,7 +155,7 @@
     </template>
     <template id="modele-reponse">
         <div class="answer-option">
-            <input type="checkbox" data-correct-answer>
+            <input type="radio" data-correct-answer required>
             <input type="text" data-answer required>
             <button type="button" class="supprimer-reponse" aria-label="Supprimer cette réponse">×</button>
         </div>
