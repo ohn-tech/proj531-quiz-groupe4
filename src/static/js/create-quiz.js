@@ -13,17 +13,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Renumérote les réponses d'une question et met à jour leurs noms de champs et leur style
     function updateAnswers(questionCard, questionIndex) {
         const answerRows = questionCard.querySelectorAll(".answer-option");
-        const hasCorrectAnswers = questionCard.querySelector("[data-correct-answer]:checked") !== null;
+        const hasCorrectAnswer = questionCard.querySelector("[data-correct-answer]:checked") !== null;
 
         answerRows.forEach((row, answerIndex) => {
-            const checkbox = row.querySelector("[data-correct-answer]");
+            const radio = row.querySelector("[data-correct-answer]");
             const answer = row.querySelector("[data-answer]");
             const removeButton = row.querySelector(".supprimer-reponse");
 
+            // Boutons radio d'une même question : même nom, donc une seule bonne réponse possible.
+            // La valeur envoyée est le numéro de la bonne réponse (0, 1, 2...)
+            radio.name = `questions[${questionIndex}][correct]`;
+            radio.value = String(answerIndex);
+            radio.setAttribute("aria-label", `Marquer la réponse ${answerIndex + 1} comme correcte`);
             // Noms au format questions[i][answers][j][...] pour garder l'ordre à l'envoi
-            checkbox.name = `questions[${questionIndex}][answers][${answerIndex}][is_correct]`;
-            checkbox.value = checkbox.checked ? "1" : "0";
-            checkbox.setAttribute("aria-label", `Marquer la réponse ${answerIndex + 1} comme correcte`);
             answer.name = `questions[${questionIndex}][answers][${answerIndex}][answer]`;
             answer.placeholder = `Réponse ${answerIndex + 1}`;
             answer.setAttribute("aria-label", `Réponse ${answerIndex + 1}`);
@@ -31,9 +33,9 @@ document.addEventListener("DOMContentLoaded", () => {
             removeButton.hidden = answerRows.length <= 2;
             removeButton.setAttribute("aria-label", `Supprimer la réponse ${answerIndex + 1}`);
 
-            // Colore en vert les bonnes réponses, et en rouge les autres dès qu'une est cochée
-            row.classList.toggle("is-correct", checkbox.checked);
-            row.classList.toggle("is-incorrect", hasCorrectAnswers && !checkbox.checked);
+            // Colore en vert la bonne réponse, et en rouge les autres dès qu'elle est choisie
+            row.classList.toggle("is-correct", radio.checked);
+            row.classList.toggle("is-incorrect", hasCorrectAnswer && !radio.checked);
         });
 
         // 6 réponses maximum par question
@@ -94,7 +96,7 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Cocher ou décocher une bonne réponse met à jour les couleurs
+    // Choisir la bonne réponse met à jour les couleurs
     questions.addEventListener("change", (event) => {
         if (event.target.matches("[data-correct-answer]")) {
             updateQuestions();
@@ -108,11 +110,11 @@ document.addEventListener("DOMContentLoaded", () => {
         // Affiche les messages du navigateur pour les champs obligatoires vides
         if (!form.reportValidity()) return;
 
-        // Chaque question doit avoir au moins une bonne réponse cochée
+        // Chaque question doit avoir sa bonne réponse cochée (une seule, grâce aux boutons radio)
         const unansweredQuestion = Array.from(questions.querySelectorAll(".question-a-creer"))
             .find((card) => !card.querySelector("[data-correct-answer]:checked"));
         if (unansweredQuestion) {
-            status.textContent = "Sélectionnez au moins une bonne réponse pour chaque question.";
+            status.textContent = "Choisissez la bonne réponse de chaque question.";
             unansweredQuestion.querySelector("[data-correct-answer]").focus();
             return;
         }
