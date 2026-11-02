@@ -6,6 +6,8 @@ import webbrowser
 import json
 # Module pour générer des codes de partage aléatoires et sûrs
 import secrets
+# Module pour enregistrer la date de création d'un quiz
+from datetime import datetime
 # Importe les outils Flask nécessaires
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
 
@@ -273,6 +275,65 @@ def accueil():
     ]
     return render_template("accueil.html", utilisateur=utilisateur, liste_quiz=liste_quiz)
 
+# Règles des quiz (README) : 1 à 20 questions, 2 à 6 réponses, une seule bonne réponse
+NB_QUESTIONS_MAX = 20
+NB_REPONSES_MIN = 2
+NB_REPONSES_MAX = 6
+DIFFICULTES = {"Facile", "Moyen", "Difficile"}
+# Code de partage des quiz privés : 6 caractères, sans les lettres et chiffres faciles à confondre (O/0, I/1, L)
+ALPHABET_CODE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+LONGUEUR_CODE = 6
+
+# Génère un code de partage de 6 caractères, pas encore utilisé par un autre quiz
+def generer_code_partage():
+    while True:
+        code = "".join(secrets.choice(ALPHABET_CODE) for _ in range(LONGUEUR_CODE))
+        if get_db().execute("SELECT 1 FROM quizz WHERE code = ?", (code,)).fetchone() is None:
+            return code
+
+# Lit les questions envoyées par le formulaire de création. Noms des champs :
+# questions[i][question], questions[i][award], questions[i][answers][j][answer]
+# et questions[i][correct] (numéro de la bonne réponse).
+# Renvoie (liste des questions, None) si tout est correct, sinon (None, message d'erreur).
+def lire_questions_formulaire(form):
+    questions = []
+    i = 0
+    while f"questions[{i}][question]" in form:
+        numero = i + 1
+        if numero > NB_QUESTIONS_MAX:
+            return None, f"Un quiz contient au maximum {NB_QUESTIONS_MAX} questions."
+
+        texte = form.get(f"questions[{i}][question]", "").strip()
+        award = form.get(f"questions[{i}][award]", "1").strip()
+        bonne = form.get(f"questions[{i}][correct]", "")
+        reponses = []
+        while f"questions[{i}][answers][{len(reponses)}][answer]" in form:
+            reponses.append(form.get(f"questions[{i}][answers][{len(reponses)}][answer]", "").strip())
+
+        if not texte:
+            return None, f"La question {numero} n'a pas d'énoncé."
+        if not award.isdecimal():
+            return None, f"Les points de la question {numero} doivent être un nombre positif."
+        if not NB_REPONSES_MIN <= len(reponses) <= NB_REPONSES_MAX:
+            return None, f"La question {numero} doit avoir entre {NB_REPONSES_MIN} et {NB_REPONSES_MAX} réponses."
+        if any(not reponse for reponse in reponses):
+            return None, f"Une réponse de la question {numero} est vide."
+        if not bonne.isdecimal() or int(bonne) >= len(reponses):
+            return None, f"Choisissez la bonne réponse de la question {numero}."
+
+        questions.append({
+            "question": texte,
+            "award": int(award),
+            "reponses": reponses,
+            "bonne": int(bonne),
+        })
+        i += 1
+
+    if not questions:
+        return None, "Ajoutez au moins une question."
+    return questions, None
+
+# Route de création d'un quiz : enregistre le quiz dans quizz, puis ses questions et leurs réponses
 @app.route("/quiz/creer", methods=["POST"])
 def creer_quizz():
     if "utilisateur" not in session:
@@ -280,60 +341,70 @@ def creer_quizz():
 
     title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
+    category = request.form.get("subject", "").strip()
+    difficulty = request.form.get("difficulty", "")
     timer = request.form.get("timer", "").strip()
-    is_public = int(request.form.get("is_public", 1))
-    textes = request.form.getlist("question_text[]")
-    choix_a = request.form.getlist("choix_a[]")
-    choix_b = request.form.getlist("choix_b[]")
-    choix_c = request.form.getlist("choix_c[]")
-    bonnes_reponses = request.form.getlist("bonne_reponse[]")
+    is_public = request.form.get("is_public", "1")
 
+    # Vérifie les informations du quiz ; en cas d'erreur, message et retour à l'accueil
+    erreur = None
     if not title or len(title) > 100:
-        flash("Le titre est obligatoire et ne doit pas dépasser 100 caractères.", "erreur")
-        return redirect(url_for("accueil"))
-    if not timer.isdecimal() or not 10 <= int(timer) <= 3600:
-        flash("La durée doit être comprise entre 10 et 3600 secondes.", "erreur")
+        erreur = "Le titre est obligatoire et ne doit pas dépasser 100 caractères."
+    elif len(description) > 300:
+        erreur = "La description ne doit pas dépasser 300 caractères."
+    elif not category or len(category) > 100:
+        erreur = "Le sujet est obligatoire et ne doit pas dépasser 100 caractères."
+    elif difficulty not in DIFFICULTES:
+        erreur = "Choisissez une difficulté."
+    elif not timer.isdecimal() or not 10 <= int(timer) <= 3600:
+        erreur = "La durée doit être comprise entre 10 et 3600 secondes."
+    elif is_public not in {"0", "1"}:
+        erreur = "Choisissez une visibilité valide pour le quiz."
+    questions = None
+    if erreur is None:
+        questions, erreur = lire_questions_formulaire(request.form)
+    if erreur is not None:
+        flash(erreur, "erreur")
         return redirect(url_for("accueil"))
 
-    code = secrets.token_urlsafe(9) if is_public == 0 else None
+    # Un quiz privé (is_public = 0) reçoit un code de partage
+    is_public = int(is_public)
+    code = generer_code_partage() if is_public == 0 else None
     db = get_db()
-    
-    # 1. Insertion du Quiz
+
+    # 1. Insertion du quiz
     cursor = db.execute(
-        "INSERT INTO quizz (title, description, timer, is_public, login_creator, code) "
-        "VALUES (?, ?, ?, ?, ?, ?)",
-        (title, description, int(timer), is_public, session["utilisateur"], code)
+        "INSERT INTO quizz (title, description, timer, is_public, code, origin, date_quizz, "
+        "category, difficulty, login_creator) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (title, description, int(timer), is_public, code, "formulaire",
+         datetime.now().strftime("%Y-%m-%d %H:%M:%S"), category, difficulty, session["utilisateur"]),
     )
     id_quizz = cursor.lastrowid
 
-    # 2. Insertion des Questions et de leurs Réponses respectives dans les tables relationnelles
-    for texte, a, b, c, bonne in zip(textes, choix_a, choix_b, choix_c, bonnes_reponses):
-        texte = texte.strip()
-        if not texte:
-            continue
-        
-        cursor_q = db.execute(
-            "INSERT INTO questions (question, id_quizz) VALUES (?, ?)",
-            (texte, id_quizz)
-        )
-        id_question = cursor_q.lastrowid
-
-        choix_liste = [a.strip(), b.strip(), c.strip()]
-        for index, choix_texte in enumerate(choix_liste):
-            is_correct = 1 if str(index) == str(bonne) else 0
+    # 2. Insertion de chaque question, puis de ses réponses (is_correct = 1 pour la bonne)
+    for question in questions:
+        id_question = db.execute(
+            "INSERT INTO questions (question, award, id_quizz) VALUES (?, ?, ?)",
+            (question["question"], question["award"], id_quizz),
+        ).lastrowid
+        for index, texte_reponse in enumerate(question["reponses"]):
             db.execute(
                 "INSERT INTO answers (text_answer, is_correct, id_question) VALUES (?, ?, ?)",
-                (choix_texte, is_correct, id_question)
+                (texte_reponse, 1 if index == question["bonne"] else 0, id_question),
             )
 
     db.commit()
-    flash("Votre quiz a été créé avec succès.", "succes")
+    if code:
+        flash(f"Votre quiz a été créé. Code de partage : {code}", "succes")
+    else:
+        flash("Votre quiz a été créé avec succès.", "succes")
     return redirect(url_for("accueil"))
 
 @app.route("/rejoindre", methods=["GET", "POST"])
 def rejoindre_quiz():
     if request.method == "POST":
-        code = request.form.get("code", "").strip()
+        # Le champ du formulaire s'appelle "code_partage" (rejoindre.html)
+        code = request.form.get("code_partage", "").strip().upper()
         db = get_db()
         quiz_prive = db.execute(
             "SELECT id_quizz FROM quizz WHERE is_public = 0 AND code = ?",

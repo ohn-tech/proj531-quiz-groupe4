@@ -1,4 +1,4 @@
-// Formulaire de création de quiz : ajout/suppression de questions et de réponses, puis validation
+// Formulaire de création de quiz : ajout/suppression de questions et de réponses, validation, puis envoi au serveur
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("form-creation-quiz");
     const questions = document.getElementById("questions-quiz");
@@ -103,48 +103,22 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Envoi du formulaire : vérifie les champs puis prépare les données du quiz
+    // Envoi du formulaire : s'il est valide, le navigateur l'envoie à la route /quiz/creer
     form.addEventListener("submit", (event) => {
-        // Pas d'envoi au serveur pour l'instant (backend pas encore relié)
-        event.preventDefault();
         // Affiche les messages du navigateur pour les champs obligatoires vides
-        if (!form.reportValidity()) return;
+        if (!form.reportValidity()) {
+            event.preventDefault();
+            return;
+        }
 
         // Chaque question doit avoir sa bonne réponse cochée (une seule, grâce aux boutons radio)
         const unansweredQuestion = Array.from(questions.querySelectorAll(".question-a-creer"))
             .find((card) => !card.querySelector("[data-correct-answer]:checked"));
         if (unansweredQuestion) {
+            event.preventDefault();
             status.textContent = "Choisissez la bonne réponse de chaque question.";
             unansweredQuestion.querySelector("[data-correct-answer]").focus();
-            return;
         }
-
-        // Construit l'objet quiz au format des tables quizz, questions et answers
-        const data = new FormData(form);
-        const quiz = {
-            title: data.get("title").trim(),
-            description: data.get("description").trim(),
-            subject: data.get("subject").trim(),
-            is_public: Number(data.get("is_public")),
-            difficulty: data.get("difficulty"),
-            code: data.get("code").trim(),
-            link: data.get("link").trim(),
-            timer: Number(data.get("timer")),
-            questions: Array.from(questions.querySelectorAll(".question-a-creer"), (card) => {
-                return {
-                    question: card.querySelector('[data-field="question"]').value.trim(),
-                    award: Number(card.querySelector('[data-field="award"]').value),
-                    answers: Array.from(card.querySelectorAll(".answer-option"), (row) => ({
-                        answer: row.querySelector("[data-answer]").value.trim(),
-                        is_correct: row.querySelector("[data-correct-answer]").checked,
-                    })),
-                };
-            }),
-        };
-
-        // Événement "quiz:ready" que le futur code d'enregistrement pourra écouter
-        form.dispatchEvent(new CustomEvent("quiz:ready", { bubbles: true, detail: quiz }));
-        status.textContent = "Formulaire valide et prêt pour l'intégration backend. Aucune donnée n'a encore été enregistrée.";
     });
 
     // Met en place la numérotation de la première question au chargement
