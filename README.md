@@ -9,6 +9,7 @@ Plateforme web en Python (Flask) où chaque utilisateur peut créer ses propres 
   - saisie directe dans un formulaire
   - import d'un quiz déjà écrit dans un fichier texte
   - génération automatique à partir d'un document (TXT ou PDF) grâce à une IA
+- Chaque quiz a un thème et une difficulté (facile, moyen, difficile)
 - Le créateur d'un quiz en est l'administrateur : lui seul peut le modifier ou le supprimer
 - Quiz publics (visibles par tous) ou privés (accessibles avec un code de 6 caractères fourni par le créateur)
 - Affichage du score final et des bonnes réponses
@@ -37,8 +38,8 @@ Plateforme web en Python (Flask) où chaque utilisateur peut créer ses propres 
 - `src/` : code source (application Flask)
 - `data/` : fichiers d'exemple pour l'import de quiz
 - `tests/` : tests automatiques
-- `docs/` : MCD, architecture
-- `docs/comptes-rendus/` : comptes-rendus de séance, planning, WBS, PBS, Gantt, PERT
+- `docs/` : MCD et document d'architecture
+- `docs/comptes-rendus/` : comptes-rendus de séance, planning des sprints, WBS, PBS, Gantt, PERT, grand bilan
 
 ## Format du fichier d'import
 - Première ligne : `QUIZ:` suivi du titre
@@ -50,7 +51,7 @@ Exemples : `data/exemple_quiz.txt` (correct) et `data/exemple_quiz_erreur.txt` (
 
 ## Installation et utilisation
 1. Installer Python 3
-2. Installer Flask : `pip install flask`
+2. Installer les dépendances : `pip install -r requirements.txt`
 3. Lancer l'application : `cd src` puis `python app.py`
 4. La page de connexion s'ouvre dans le navigateur (http://127.0.0.1:5000/login)
 
