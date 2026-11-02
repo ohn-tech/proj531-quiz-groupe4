@@ -37,84 +37,56 @@ def close_db(exception):
     if db is not None:
         db.close()
 
-# Crée les tables si besoin et ajoute les colonnes manquantes des anciennes versions
-# Renvoie True si la table "utilisateurs" vient d'être créée
+# Fonction à exécuter SEULEMENT lors de la CREATION de la base de donnée
 def create_table():
     db = get_db()
-    # Mémorise si la table existait déjà avant la création
-    table_exists = db.execute(
-        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'utilisateurs'"
-    ).fetchone() is not None
-    db.execute("""
+    db.executescript("""
         CREATE TABLE IF NOT EXISTS utilisateurs (
             login TEXT PRIMARY KEY,
-            password TEXT,
-            score INTEGER,
-            role TEXT
-        )
-    """)
-    # Ajoute la colonne "role" si la base a été créée avant son ajout
-    colonnes_utilisateurs = {
-        colonne["name"] for colonne in db.execute("PRAGMA table_info(utilisateurs)").fetchall()
-    }
-    if "role" not in colonnes_utilisateurs:
-        db.execute("ALTER TABLE utilisateurs ADD COLUMN role TEXT")
-    # Table des quiz créés depuis le site (questions stockées en JSON)
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS quizzes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titre TEXT NOT NULL,
-            description TEXT NOT NULL,
-            duree INTEGER NOT NULL,
-            questions TEXT NOT NULL,
-            visibilite TEXT NOT NULL DEFAULT 'public',
-            createur TEXT,
-            code_partage TEXT
-        )
-    """)
-    # Tables du futur modèle de données (quizz, questions, answers), utilisées par le formulaire de création
-    db.executescript("""
+            password TEXT
+        );
         CREATE TABLE IF NOT EXISTS quizz (
             id_quizz INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             description TEXT,
-            subject TEXT NOT NULL,
+            timer INTEGER NOT NULL DEFAULT 120,
             is_public INTEGER NOT NULL DEFAULT 0,
+            code TEXT NOT NULL,
+            origin TEXT NOT NULL,
+            date_quizz TEXT NOT NULL,
+            category TEXT NOT NULL,
             difficulty TEXT NOT NULL,
-            code TEXT,
-            link TEXT NOT NULL,
-            timer INTEGER NOT NULL DEFAULT 120
+            login_creator TEXT
         );
         CREATE TABLE IF NOT EXISTS questions (
             id_question INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_quizz INTEGER NOT NULL,
             question TEXT NOT NULL,
-            award INTEGER NOT NULL DEFAULT 0
+            award INTEGER NOT NULL DEFAULT 0,
+            id_quizz INTEGER NOT NULL
         );
         CREATE TABLE IF NOT EXISTS answers (
             id_answer INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_question INTEGER NOT NULL,
-            answer TEXT NOT NULL,
-            is_correct INTEGER NOT NULL DEFAULT 0
+            text_answer TEXT NOT NULL,
+            is_correct INTEGER NOT NULL DEFAULT 0,
+            id_question INTEGER NOT NULL
         );
+        CREATE TABLE IF NOT EXIST attempts (
+            id_attempt INTEGER PRIMARY KEY AUTOINCREMENT,
+            score INTEGER NOT NULL DEFAULT 0,
+            date_attempt TEXT NOT NULL,
+            login TEXT NOT NULL,
+            id_quizz INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXIST folder (
+            id_document INTEGER PRIMARY KEY AUTOINCREMENT,
+            name_folder TEXT NOT NULL,
+            format TEXT,
+            date_folder TEXT,
+            id_quizz INTEGER NOT NULL
+        )     
     """)
-    # Ajoute les colonnes manquantes de la table "quizzes"
-    colonnes_quiz = {
-        colonne["name"] for colonne in db.execute("PRAGMA table_info(quizzes)").fetchall()
-    }
-    if "visibilite" not in colonnes_quiz:
-        db.execute("ALTER TABLE quizzes ADD COLUMN visibilite TEXT NOT NULL DEFAULT 'public'")
-    if "createur" not in colonnes_quiz:
-        db.execute("ALTER TABLE quizzes ADD COLUMN createur TEXT")
-    if "code_partage" not in colonnes_quiz:
-        db.execute("ALTER TABLE quizzes ADD COLUMN code_partage TEXT")
-    # Deux quiz privés ne peuvent pas avoir le même code de partage
-    db.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_quizzes_code_partage "
-        "ON quizzes (code_partage) WHERE code_partage IS NOT NULL"
-    )
     db.commit()
-    return not table_exists
+    return
 
 # Execute to add 2 ppl to the database before doing tests
 # Does NOT need to be run every time we lunch the app.
