@@ -27,6 +27,14 @@
                     {# Quiz de la base : nb_questions ; quiz factices : longueur de la liste questions #}
                     {% set nb = quiz.nb_questions if quiz.nb_questions is defined else quiz.questions | length %}
                     <p class="nb-questions">{{ nb }} question{{ 's' if nb > 1 }} · ⏱ {{ quiz.duree }} s</p>
+                    {# Sujet, difficulté et créateur : absents pour les quiz factices, sujet et difficulté vides pour les quiz importés #}
+                    {% if quiz.sujet or quiz.difficulte or quiz.createur %}
+                        <p class="infos-quiz">
+                            {% if quiz.sujet %}<span class="sujet-quiz">{{ quiz.sujet }}</span>{% endif %}
+                            {% if quiz.difficulte %}<span class="difficulte difficulte-{{ quiz.difficulte | lower }}">{{ quiz.difficulte }}</span>{% endif %}
+                            {% if quiz.createur %}<span class="createur-quiz">par {{ 'vous' if quiz.createur == utilisateur else quiz.createur }}</span>{% endif %}
+                        </p>
+                    {% endif %}
                     <a href="{{ url_for('quizz_route', quiz_id=quiz.id) }}" class="btn-principal">Commencer</a>
                     {# Code et lien de partage, visibles seulement par le créateur du quiz #}
                     {% if quiz.code_partage %}

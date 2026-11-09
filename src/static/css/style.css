@@ -446,6 +446,44 @@ body.page-large {
     color: var(--primaire);
 }
 
+/* Sujet, difficulté et créateur d'un quiz, sous le nombre de questions */
+.infos-quiz {
+    display: flex;
+    flex-wrap: wrap;
+    align-items: center;
+    gap: 0.4rem 0.6rem;
+    margin: -0.5rem 0 1rem;
+    font-size: 0.8rem;
+    color: var(--texte-doux);
+}
+
+.sujet-quiz {
+    font-weight: 600;
+    color: var(--texte);
+}
+
+.difficulte {
+    padding: 0.1rem 0.55rem;
+    font-size: 0.75rem;
+    font-weight: 600;
+    border-radius: 999px;
+}
+
+.difficulte-facile {
+    color: #166534;
+    background: #dcfce7;
+}
+
+.difficulte-moyen {
+    color: #92400e;
+    background: #fef3c7;
+}
+
+.difficulte-difficile {
+    color: #991b1b;
+    background: #fee2e2;
+}
+
 /* Lien qui ressemble à un bouton (« Commencer ») */
 .btn-principal {
     padding: 0.7rem;

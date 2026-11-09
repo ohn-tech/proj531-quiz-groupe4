@@ -61,6 +61,8 @@ cover/
 local_settings.py
 db.sqlite3
 db.sqlite3-journal
+# Base SQLite locale de l'application (recréée au démarrage, propre à chaque poste)
+*.db
 
 # Flask stuff:
 instance/
