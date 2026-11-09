@@ -1,0 +1,34 @@
+{# Page historique : scores de l'utilisateur connecté, du plus récent au plus ancien #}
+{% extends "base.html" %}
+{% block titre %}Historique{% endblock %}
+{% block classe_body %}page-large{% endblock %}
+
+{% block contenu %}
+<main class="conteneur">
+    <h1 class="titre-page">Mon historique</h1>
+
+    {% if historique %}
+        <table class="tableau-historique">
+            <thead>
+                <tr>
+                    <th>Quiz</th>
+                    <th>Score</th>
+                    <th>Date</th>
+                </tr>
+            </thead>
+            <tbody>
+                {% for tentative in historique %}
+                    <tr>
+                        {# Un quiz supprimé n'a plus de titre : on l'indique #}
+                        <td>{{ tentative.titre or "Quiz supprimé" }}</td>
+                        <td>{{ tentative.score }} / {{ tentative.nb_questions }}</td>
+                        <td>{{ tentative.date }}</td>
+                    </tr>
+                {% endfor %}
+            </tbody>
+        </table>
+    {% else %}
+        <p class="vide">Vous n'avez encore passé aucun quiz.</p>
+    {% endif %}
+</main>
+{% endblock %}
