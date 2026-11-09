@@ -6,10 +6,10 @@ import webbrowser
 import json
 # Module pour générer des codes de partage aléatoires et sûrs
 import secrets
-# Module pour enregistrer la date de création d'un quiz
-from datetime import datetime
 # Importe les outils Flask nécessaires
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
+# Module pour récuppérer la date en format chaîne de charactère
+from datetime import datetime
 
 # Crée l'application Flask
 app = Flask(__name__)
@@ -28,8 +28,9 @@ DATABASE = os.path.join(app.root_path, "quizzapp.db")
 def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(DATABASE)
-        # Permet d'accéder aux colonnes par leur nom : ligne["login"]
+        g.db.execute("PRAGMA foreign_keys = ON")
         g.db.row_factory = sqlite3.Row
+
     return g.db
 
 # Ferme automatiquement la connexion à la fin de chaque requête
@@ -43,52 +44,60 @@ def close_db(exception):
 def create_table():
     db = get_db()
     db.executescript("""
-        CREATE TABLE IF NOT EXISTS utilisateurs (
-            login TEXT PRIMARY KEY,
-            password TEXT
-        );
-        CREATE TABLE IF NOT EXISTS quizz (
-            id_quizz INTEGER PRIMARY KEY AUTOINCREMENT,
-            title TEXT NOT NULL,
-            description TEXT,
-            timer INTEGER NOT NULL DEFAULT 120,
-            is_public INTEGER NOT NULL DEFAULT 0,
-            code TEXT,
-            origin TEXT,
-            date_quizz TEXT,
-            category TEXT,
-            difficulty TEXT,
-            login_creator TEXT NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS questions (
-            id_question INTEGER PRIMARY KEY AUTOINCREMENT,
-            question TEXT NOT NULL,
-            award INTEGER NOT NULL DEFAULT 0,
-            id_quizz INTEGER NOT NULL,
-            FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
-        );
-        CREATE TABLE IF NOT EXISTS answers (
-            id_answer INTEGER PRIMARY KEY AUTOINCREMENT,
-            text_answer TEXT NOT NULL,
-            is_correct INTEGER NOT NULL DEFAULT 0,
-            id_question INTEGER NOT NULL,
-            FOREIGN KEY (id_question) REFERENCES questions(id_question)
-        );
-        CREATE TABLE IF NOT EXISTS attempts (
-            id_attempt INTEGER PRIMARY KEY AUTOINCREMENT,
-            score INTEGER NOT NULL DEFAULT 0,
-            date_attempt TEXT NOT NULL,
-            login TEXT NOT NULL,
-            id_quizz INTEGER NOT NULL
-        );
-        CREATE TABLE IF NOT EXISTS folder (
-            id_folder INTEGER PRIMARY KEY AUTOINCREMENT,
-            name_folder TEXT NOT NULL,
-            format TEXT,
-            date_folder TEXT,
-            id_quizz INTEGER NOT NULL
-        );    
-    """)
+    CREATE TABLE IF NOT EXISTS utilisateurs (
+    login TEXT PRIMARY KEY,
+    password TEXT NOT NULL
+    );
+
+    CREATE TABLE IF NOT EXISTS quizz (
+    id_quizz INTEGER PRIMARY KEY AUTOINCREMENT,
+    title TEXT NOT NULL,
+    description TEXT,
+    timer INTEGER NOT NULL DEFAULT 120,
+    is_public INTEGER NOT NULL DEFAULT 0,
+    code TEXT,
+    origin TEXT,
+    date_quizz TEXT,
+    category TEXT,
+    difficulty TEXT,
+    login_creator TEXT NOT NULL,
+    FOREIGN KEY (login_creator) REFERENCES utilisateurs(login)
+    );
+
+    CREATE TABLE IF NOT EXISTS questions (
+    id_question INTEGER PRIMARY KEY AUTOINCREMENT,
+    question TEXT NOT NULL,
+    award INTEGER NOT NULL DEFAULT 0,
+    id_quizz INTEGER NOT NULL,
+    FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
+    );
+
+    CREATE TABLE IF NOT EXISTS answers (
+    id_answer INTEGER PRIMARY KEY AUTOINCREMENT,
+    text_answer TEXT NOT NULL,
+    is_correct INTEGER NOT NULL DEFAULT 0,
+    id_question INTEGER NOT NULL,
+    FOREIGN KEY (id_question) REFERENCES questions(id_question)
+    );
+
+    CREATE TABLE IF NOT EXISTS attempts (
+    id_attempt INTEGER PRIMARY KEY AUTOINCREMENT,
+    score INTEGER NOT NULL DEFAULT 0,
+    date_attempt TEXT NOT NULL,
+    login TEXT NOT NULL,
+    id_quizz INTEGER NOT NULL,
+    FOREIGN KEY (login) REFERENCES utilisateurs(login)
+    );
+
+    CREATE TABLE IF NOT EXISTS folder (
+    id_folder INTEGER PRIMARY KEY AUTOINCREMENT,
+    name_folder TEXT NOT NULL,
+    format TEXT,
+    date_folder TEXT,
+    id_quizz INTEGER NOT NULL,
+    FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
+    );
+                     """)
     db.commit()
 
 # Ajoute des utilisateurs de test si la table est vide
@@ -248,9 +257,7 @@ def accueil():
     utilisateur = session.get("utilisateur")
     db = get_db()
     quizz_crees = db.execute(
-        # nb_questions : nombre de questions du quiz, compté dans la table questions
-        "SELECT id_quizz, title, description, timer, is_public, login_creator, code, "
-        "(SELECT COUNT(*) FROM questions WHERE questions.id_quizz = quizz.id_quizz) AS nb_questions "
+        "SELECT id_quizz, title, description, timer, is_public, login_creator, code "
         "FROM quizz WHERE is_public = 1 OR login_creator = ? ORDER BY id_quizz DESC",
         (utilisateur,),
     ).fetchall()
@@ -261,7 +268,6 @@ def accueil():
             "titre": q["title"],
             "description": q["description"],
             "duree": q["timer"],
-            "nb_questions": q["nb_questions"],
             "visibilite": q["is_public"],
             "code_partage": q["code"] if q["login_creator"] == utilisateur else None,
             "lien_partage": url_for(
@@ -275,65 +281,6 @@ def accueil():
     ]
     return render_template("accueil.html", utilisateur=utilisateur, liste_quiz=liste_quiz)
 
-# Règles des quiz (README) : 1 à 20 questions, 2 à 6 réponses, une seule bonne réponse
-NB_QUESTIONS_MAX = 20
-NB_REPONSES_MIN = 2
-NB_REPONSES_MAX = 6
-DIFFICULTES = {"Facile", "Moyen", "Difficile"}
-# Code de partage des quiz privés : 6 caractères, sans les lettres et chiffres faciles à confondre (O/0, I/1, L)
-ALPHABET_CODE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-LONGUEUR_CODE = 6
-
-# Génère un code de partage de 6 caractères, pas encore utilisé par un autre quiz
-def generer_code_partage():
-    while True:
-        code = "".join(secrets.choice(ALPHABET_CODE) for _ in range(LONGUEUR_CODE))
-        if get_db().execute("SELECT 1 FROM quizz WHERE code = ?", (code,)).fetchone() is None:
-            return code
-
-# Lit les questions envoyées par le formulaire de création. Noms des champs :
-# questions[i][question], questions[i][award], questions[i][answers][j][answer]
-# et questions[i][correct] (numéro de la bonne réponse).
-# Renvoie (liste des questions, None) si tout est correct, sinon (None, message d'erreur).
-def lire_questions_formulaire(form):
-    questions = []
-    i = 0
-    while f"questions[{i}][question]" in form:
-        numero = i + 1
-        if numero > NB_QUESTIONS_MAX:
-            return None, f"Un quiz contient au maximum {NB_QUESTIONS_MAX} questions."
-
-        texte = form.get(f"questions[{i}][question]", "").strip()
-        award = form.get(f"questions[{i}][award]", "1").strip()
-        bonne = form.get(f"questions[{i}][correct]", "")
-        reponses = []
-        while f"questions[{i}][answers][{len(reponses)}][answer]" in form:
-            reponses.append(form.get(f"questions[{i}][answers][{len(reponses)}][answer]", "").strip())
-
-        if not texte:
-            return None, f"La question {numero} n'a pas d'énoncé."
-        if not award.isdecimal():
-            return None, f"Les points de la question {numero} doivent être un nombre positif."
-        if not NB_REPONSES_MIN <= len(reponses) <= NB_REPONSES_MAX:
-            return None, f"La question {numero} doit avoir entre {NB_REPONSES_MIN} et {NB_REPONSES_MAX} réponses."
-        if any(not reponse for reponse in reponses):
-            return None, f"Une réponse de la question {numero} est vide."
-        if not bonne.isdecimal() or int(bonne) >= len(reponses):
-            return None, f"Choisissez la bonne réponse de la question {numero}."
-
-        questions.append({
-            "question": texte,
-            "award": int(award),
-            "reponses": reponses,
-            "bonne": int(bonne),
-        })
-        i += 1
-
-    if not questions:
-        return None, "Ajoutez au moins une question."
-    return questions, None
-
-# Route de création d'un quiz : enregistre le quiz dans quizz, puis ses questions et leurs réponses
 @app.route("/quiz/creer", methods=["POST"])
 def creer_quizz():
     if "utilisateur" not in session:
@@ -341,70 +288,61 @@ def creer_quizz():
 
     title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
-    category = request.form.get("subject", "").strip()
-    difficulty = request.form.get("difficulty", "")
     timer = request.form.get("timer", "").strip()
-    is_public = request.form.get("is_public", "1")
+    is_public = int(request.form.get("is_public", 1))
+    textes = request.form.getlist("question_text[]")
+    choix_a = request.form.getlist("choix_a[]")
+    choix_b = request.form.getlist("choix_b[]")
+    choix_c = request.form.getlist("choix_c[]")
+    bonnes_reponses = request.form.getlist("bonne_reponse[]")
+    date_actuelle = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-    # Vérifie les informations du quiz ; en cas d'erreur, message et retour à l'accueil
-    erreur = None
     if not title or len(title) > 100:
-        erreur = "Le titre est obligatoire et ne doit pas dépasser 100 caractères."
-    elif len(description) > 300:
-        erreur = "La description ne doit pas dépasser 300 caractères."
-    elif not category or len(category) > 100:
-        erreur = "Le sujet est obligatoire et ne doit pas dépasser 100 caractères."
-    elif difficulty not in DIFFICULTES:
-        erreur = "Choisissez une difficulté."
-    elif not timer.isdecimal() or not 10 <= int(timer) <= 3600:
-        erreur = "La durée doit être comprise entre 10 et 3600 secondes."
-    elif is_public not in {"0", "1"}:
-        erreur = "Choisissez une visibilité valide pour le quiz."
-    questions = None
-    if erreur is None:
-        questions, erreur = lire_questions_formulaire(request.form)
-    if erreur is not None:
-        flash(erreur, "erreur")
+        flash("Le titre est obligatoire et ne doit pas dépasser 100 caractères.", "erreur")
+        return redirect(url_for("accueil"))
+    if not timer.isdecimal() or not 10 <= int(timer) <= 3600:
+        flash("La durée doit être comprise entre 10 et 3600 secondes.", "erreur")
         return redirect(url_for("accueil"))
 
-    # Un quiz privé (is_public = 0) reçoit un code de partage
-    is_public = int(is_public)
-    code = generer_code_partage() if is_public == 0 else None
+    code = secrets.token_urlsafe(9) if is_public == 0 else None
     db = get_db()
-
-    # 1. Insertion du quiz
+    
+    # 1. Insertion du Quiz
     cursor = db.execute(
-        "INSERT INTO quizz (title, description, timer, is_public, code, origin, date_quizz, "
-        "category, difficulty, login_creator) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (title, description, int(timer), is_public, code, "formulaire",
-         datetime.now().strftime("%Y-%m-%d %H:%M:%S"), category, difficulty, session["utilisateur"]),
+        "INSERT INTO quizz (title, description, timer, is_public, login_creator, code, date_quizz) "
+        "VALUES (?, ?, ?, ?, ?, ?, ?)",
+        (title, description, int(timer), is_public, session["utilisateur"], code, date_actuelle)
     )
     id_quizz = cursor.lastrowid
 
-    # 2. Insertion de chaque question, puis de ses réponses (is_correct = 1 pour la bonne)
-    for question in questions:
-        id_question = db.execute(
-            "INSERT INTO questions (question, award, id_quizz) VALUES (?, ?, ?)",
-            (question["question"], question["award"], id_quizz),
-        ).lastrowid
-        for index, texte_reponse in enumerate(question["reponses"]):
+    # 2. Insertion des Questions et de leurs Réponses respectives dans les tables relationnelles
+    for texte, a, b, c, bonne in zip(textes, choix_a, choix_b, choix_c, bonnes_reponses):
+        texte = texte.strip()
+        if not texte:
+            continue
+        
+        cursor_q = db.execute(
+            "INSERT INTO questions (question, id_quizz) VALUES (?, ?)",
+            (texte, id_quizz)
+        )
+        id_question = cursor_q.lastrowid
+
+        choix_liste = [a.strip(), b.strip(), c.strip()]
+        for index, choix_texte in enumerate(choix_liste):
+            is_correct = 1 if str(index) == str(bonne) else 0
             db.execute(
                 "INSERT INTO answers (text_answer, is_correct, id_question) VALUES (?, ?, ?)",
-                (texte_reponse, 1 if index == question["bonne"] else 0, id_question),
+                (choix_texte, is_correct, id_question)
             )
 
     db.commit()
-    if code:
-        flash(f"Votre quiz a été créé. Code de partage : {code}", "succes")
-    else:
-        flash("Votre quiz a été créé avec succès.", "succes")
+    flash("Votre quiz a été créé avec succès.", "succes")
     return redirect(url_for("accueil"))
 
 @app.route("/rejoindre", methods=["GET", "POST"])
 def rejoindre_quiz():
     if request.method == "POST":
-        # Le champ du formulaire s'appelle "code_partage" (rejoindre.html)
-        code = request.form.get("code_partage", "").strip().upper()
+        code = request.form.get("code", "").strip()
         db = get_db()
         quiz_prive = db.execute(
             "SELECT id_quizz FROM quizz WHERE is_public = 0 AND code = ?",
@@ -438,25 +376,84 @@ def quizz_route(quiz_id):
 
     if request.method == "POST":
         score = 0
+        date_actuelle = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Calcul du score
         for i, question in enumerate(quizz["questions"]):
             if request.form.get(f"q{i}") == str(question["reponse"]):
                 score += 1
+
+        # Enregistrement uniquement pour les utilisateurs connectés
+        if "utilisateur" in session and str(quizz["id"]).startswith("custom-"):
+
+            db = get_db()
+
+            # Récupération de l'identifiant réel du quiz
+            id_quizz = int(str(quizz["id"]).replace("custom-", ""))
+
+            # Enregistrement de la tentative
+            cursor = db.execute(
+                """
+                INSERT INTO attempts (score, date_attempt, login, id_quizz)
+                VALUES (?, ?, ?, ?)
+                """,
+                (score, date_actuelle, session["utilisateur"], id_quizz)
+            )
+
+            db.commit()
+
         message = f"{quizz['titre']} : {score} / {len(quizz['questions'])} bonnes réponses."
+
         if request.form.get("temps_ecoule") == "1":
             message = "Temps écoulé ! " + message
-        
+
         if "utilisateur" not in session:
             return render_template("quiz.html", quiz=quizz, resultat=message)
+
         flash(message, "succes")
         return redirect(url_for("accueil"))
 
-    return render_template("quiz.html", quiz=quizz)
+    return render_template("quiz.html", quizz=quizz)
+
+def historique_utilisateur(login):
+    db = get_db()
+
+    lignes = db.execute("""
+        SELECT
+            a.id_quizz,
+            q.title AS titre,
+            a.score,
+            a.date_attempt AS date,
+            (
+                SELECT COUNT(*)
+                FROM questions
+                WHERE questions.id_quizz = a.id_quizz
+            ) AS nb_questions
+        FROM attempts AS a
+        LEFT JOIN quizz AS q ON q.id_quizz = a.id_quizz
+        WHERE a.login = ?
+        ORDER BY a.date_attempt DESC
+    """, (login,)).fetchall()
+
+    return [
+        {
+            "id_quizz": int(ligne["id_quizz"]),
+            "titre": ligne["titre"],
+            "score": int(ligne["score"]),
+            "nb_questions": int(ligne["nb_questions"]),
+            "date": ligne["date"]
+        }
+        for ligne in lignes
+    ]
 
 @app.route("/historique")
 def historique():
     if "utilisateur" not in session:
         return redirect(url_for("login"))
-    return render_template("bientot.html", titre="Historique")
+
+    historique = historique_utilisateur(session["utilisateur"])
+
+    return render_template("historique.html", historique=historique)
 
 @app.route("/admin")
 def admin():
