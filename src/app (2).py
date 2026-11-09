@@ -1,4 +1,4 @@
-# Module pour lire les variables d'environnement
+ # Module pour lire les variables d'environnement
 import os
 # Module pour ouvrir le navigateur automatiquement
 import webbrowser
