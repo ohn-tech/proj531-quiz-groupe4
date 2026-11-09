@@ -263,6 +263,8 @@ def accueil():
             "duree": q["timer"],
             "nb_questions": q["nb_questions"],
             "visibilite": q["is_public"],
+            # Vrai si l'utilisateur connecté a créé ce quiz : lui seul voit le bouton « Supprimer »
+            "est_createur": q["login_creator"] == utilisateur,
             "code_partage": q["code"] if q["login_creator"] == utilisateur else None,
             "lien_partage": url_for(
                 "quizz_route",
@@ -458,14 +460,54 @@ def historique():
         return redirect(url_for("login"))
     return render_template("bientot.html", titre="Historique")
 
-@app.route("/admin")
-def admin():
+# Supprime un quiz : seul son créateur en a le droit (« le créateur est l'administrateur de son quiz »)
+@app.route("/quiz/<quiz_id>/supprimer", methods=["POST"])
+def supprimer_quizz(quiz_id):
+    # Il faut être connecté pour supprimer un quiz
     if "utilisateur" not in session:
         return redirect(url_for("login"))
-    if session["utilisateur"] != "admin":
-        flash("Accès réservé à l'administrateur.")
+
+    # Seuls les quiz de la base ont un créateur : leur identifiant est de la forme « custom-5 ».
+    # Les quiz factices (FAUX_QUIZ, identifiants « 1 », « 2 »...) ne peuvent pas être supprimés.
+    if not str(quiz_id).startswith("custom-"):
+        abort(404)
+    # Garde seulement le numéro après « custom- »
+    identifiant = str(quiz_id)[7:]
+    if not identifiant.isdecimal():
+        abort(404)
+
+    db = get_db()
+    # Récupère le créateur du quiz demandé
+    ligne = db.execute(
+        "SELECT login_creator FROM quizz WHERE id_quizz = ?", (int(identifiant),)
+    ).fetchone()
+    # Quiz introuvable : erreur 404
+    if ligne is None:
+        abort(404)
+
+    # Vérification des droits : si l'utilisateur connecté n'est pas le créateur, on refuse
+    # (protège aussi contre quelqu'un qui enverrait la requête à la main, sans passer par le bouton)
+    if ligne["login_creator"] != session["utilisateur"]:
+        flash("Seul le créateur de ce quiz peut le supprimer.")
         return redirect(url_for("accueil"))
-    return render_template("bientot.html", titre="Administration")
+
+    id_quizz = int(identifiant)
+    # Supprime d'abord ce qui dépend du quiz, pour ne laisser aucune ligne orpheline :
+    # les réponses de ses questions, ses questions, les tentatives et le document source
+    db.execute(
+        "DELETE FROM answers WHERE id_question IN (SELECT id_question FROM questions WHERE id_quizz = ?)",
+        (id_quizz,),
+    )
+    db.execute("DELETE FROM questions WHERE id_quizz = ?", (id_quizz,))
+    db.execute("DELETE FROM attempts WHERE id_quizz = ?", (id_quizz,))
+    db.execute("DELETE FROM folder WHERE id_quizz = ?", (id_quizz,))
+    # Puis le quiz lui-même
+    db.execute("DELETE FROM quizz WHERE id_quizz = ?", (id_quizz,))
+    # Enregistre les suppressions dans la base
+    db.commit()
+
+    flash("Le quiz a été supprimé.", "succes")
+    return redirect(url_for("accueil"))
 
 @app.route("/logout")
 def logout():
