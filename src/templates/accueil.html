@@ -28,6 +28,14 @@
                     {% set nb = quiz.nb_questions if quiz.nb_questions is defined else quiz.questions | length %}
                     <p class="nb-questions">{{ nb }} question{{ 's' if nb > 1 }} · ⏱ {{ quiz.duree }} s</p>
                     <a href="{{ url_for('quizz_route', quiz_id=quiz.id) }}" class="btn-principal">Commencer</a>
+                    {# Bouton « Supprimer », visible seulement par le créateur du quiz (droits du créateur) #}
+                    {% if quiz.est_createur %}
+                        {# Formulaire POST : la suppression ne peut pas se faire en tapant une simple adresse #}
+                        <form method="POST" action="{{ url_for('supprimer_quizz', quiz_id=quiz.id) }}"
+                              onsubmit="return confirm('Supprimer ce quiz ? Cette action est définitive.');">
+                            <button type="submit" class="btn-supprimer">Supprimer</button>
+                        </form>
+                    {% endif %}
                     {# Code et lien de partage, visibles seulement par le créateur du quiz #}
                     {% if quiz.code_partage %}
                         <div class="infos-partage">
