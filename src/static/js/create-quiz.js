@@ -1,4 +1,4 @@
-// Formulaire de création de quiz : ajout/suppression de questions et de réponses, puis validation
+// Formulaire de création de quiz : ajout/suppression de questions et de réponses, validation, puis envoi au serveur
 document.addEventListener("DOMContentLoaded", () => {
     const form = document.getElementById("form-creation-quiz");
     const questions = document.getElementById("questions-quiz");
@@ -13,17 +13,19 @@ document.addEventListener("DOMContentLoaded", () => {
     // Renumérote les réponses d'une question et met à jour leurs noms de champs et leur style
     function updateAnswers(questionCard, questionIndex) {
         const answerRows = questionCard.querySelectorAll(".answer-option");
-        const hasCorrectAnswers = questionCard.querySelector("[data-correct-answer]:checked") !== null;
+        const hasCorrectAnswer = questionCard.querySelector("[data-correct-answer]:checked") !== null;
 
         answerRows.forEach((row, answerIndex) => {
-            const checkbox = row.querySelector("[data-correct-answer]");
+            const radio = row.querySelector("[data-correct-answer]");
             const answer = row.querySelector("[data-answer]");
             const removeButton = row.querySelector(".supprimer-reponse");
 
+            // Boutons radio d'une même question : même nom, donc une seule bonne réponse possible.
+            // La valeur envoyée est le numéro de la bonne réponse (0, 1, 2...)
+            radio.name = `questions[${questionIndex}][correct]`;
+            radio.value = String(answerIndex);
+            radio.setAttribute("aria-label", `Marquer la réponse ${answerIndex + 1} comme correcte`);
             // Noms au format questions[i][answers][j][...] pour garder l'ordre à l'envoi
-            checkbox.name = `questions[${questionIndex}][answers][${answerIndex}][is_correct]`;
-            checkbox.value = checkbox.checked ? "1" : "0";
-            checkbox.setAttribute("aria-label", `Marquer la réponse ${answerIndex + 1} comme correcte`);
             answer.name = `questions[${questionIndex}][answers][${answerIndex}][answer]`;
             answer.placeholder = `Réponse ${answerIndex + 1}`;
             answer.setAttribute("aria-label", `Réponse ${answerIndex + 1}`);
@@ -31,9 +33,9 @@ document.addEventListener("DOMContentLoaded", () => {
             removeButton.hidden = answerRows.length <= 2;
             removeButton.setAttribute("aria-label", `Supprimer la réponse ${answerIndex + 1}`);
 
-            // Colore en vert les bonnes réponses, et en rouge les autres dès qu'une est cochée
-            row.classList.toggle("is-correct", checkbox.checked);
-            row.classList.toggle("is-incorrect", hasCorrectAnswers && !checkbox.checked);
+            // Colore en vert la bonne réponse, et en rouge les autres dès qu'elle est choisie
+            row.classList.toggle("is-correct", radio.checked);
+            row.classList.toggle("is-incorrect", hasCorrectAnswer && !radio.checked);
         });
 
         // 6 réponses maximum par question
@@ -94,55 +96,29 @@ document.addEventListener("DOMContentLoaded", () => {
         }
     });
 
-    // Cocher ou décocher une bonne réponse met à jour les couleurs
+    // Choisir la bonne réponse met à jour les couleurs
     questions.addEventListener("change", (event) => {
         if (event.target.matches("[data-correct-answer]")) {
             updateQuestions();
         }
     });
 
-    // Envoi du formulaire : vérifie les champs puis prépare les données du quiz
+    // Envoi du formulaire : s'il est valide, le navigateur l'envoie à la route /quiz/creer
     form.addEventListener("submit", (event) => {
-        // Pas d'envoi au serveur pour l'instant (backend pas encore relié)
-        event.preventDefault();
         // Affiche les messages du navigateur pour les champs obligatoires vides
-        if (!form.reportValidity()) return;
-
-        // Chaque question doit avoir au moins une bonne réponse cochée
-        const unansweredQuestion = Array.from(questions.querySelectorAll(".question-a-creer"))
-            .find((card) => !card.querySelector("[data-correct-answer]:checked"));
-        if (unansweredQuestion) {
-            status.textContent = "Sélectionnez au moins une bonne réponse pour chaque question.";
-            unansweredQuestion.querySelector("[data-correct-answer]").focus();
+        if (!form.reportValidity()) {
+            event.preventDefault();
             return;
         }
 
-        // Construit l'objet quiz au format des tables quizz, questions et answers
-        const data = new FormData(form);
-        const quiz = {
-            title: data.get("title").trim(),
-            description: data.get("description").trim(),
-            subject: data.get("subject").trim(),
-            is_public: Number(data.get("is_public")),
-            difficulty: data.get("difficulty"),
-            code: data.get("code").trim(),
-            link: data.get("link").trim(),
-            timer: Number(data.get("timer")),
-            questions: Array.from(questions.querySelectorAll(".question-a-creer"), (card) => {
-                return {
-                    question: card.querySelector('[data-field="question"]').value.trim(),
-                    award: Number(card.querySelector('[data-field="award"]').value),
-                    answers: Array.from(card.querySelectorAll(".answer-option"), (row) => ({
-                        answer: row.querySelector("[data-answer]").value.trim(),
-                        is_correct: row.querySelector("[data-correct-answer]").checked,
-                    })),
-                };
-            }),
-        };
-
-        // Événement "quiz:ready" que le futur code d'enregistrement pourra écouter
-        form.dispatchEvent(new CustomEvent("quiz:ready", { bubbles: true, detail: quiz }));
-        status.textContent = "Formulaire valide et prêt pour l'intégration backend. Aucune donnée n'a encore été enregistrée.";
+        // Chaque question doit avoir sa bonne réponse cochée (une seule, grâce aux boutons radio)
+        const unansweredQuestion = Array.from(questions.querySelectorAll(".question-a-creer"))
+            .find((card) => !card.querySelector("[data-correct-answer]:checked"));
+        if (unansweredQuestion) {
+            event.preventDefault();
+            status.textContent = "Choisissez la bonne réponse de chaque question.";
+            unansweredQuestion.querySelector("[data-correct-answer]").focus();
+        }
     });
 
     // Met en place la numérotation de la première question au chargement
