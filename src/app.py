@@ -2,14 +2,16 @@
 import os
 # Module pour ouvrir le navigateur automatiquement
 import webbrowser
-# Module pour stocker les questions des quiz sous forme de texte JSON
+# Module pour stocker les questions (géré via la base de données relationnelle)
 import json
 # Module pour générer des codes de partage aléatoires et sûrs
 import secrets
+# Module pour enregistrer la date de création d'un quiz
+from datetime import datetime
 # Importe les outils Flask nécessaires
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
 # Lecture des quiz importés depuis un fichier texte, et vérification avant enregistrement
-from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX, NB_QUESTIONS_MAX
+from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX
 
 # Crée l'application Flask
 app = Flask(__name__)
@@ -39,133 +41,72 @@ def close_db(exception):
     if db is not None:
         db.close()
 
-# Crée les tables si besoin et ajoute les colonnes manquantes des anciennes versions
-# Renvoie True si la table "utilisateurs" vient d'être créée
+# Fonction à exécuter lors de la création de la base de données
 def create_table():
     db = get_db()
-    # Mémorise si la table existait déjà avant la création
-    table_exists = db.execute(
-        "SELECT 1 FROM sqlite_master WHERE type = 'table' AND name = 'utilisateurs'"
-    ).fetchone() is not None
-    db.execute("""
+    db.executescript("""
         CREATE TABLE IF NOT EXISTS utilisateurs (
             login TEXT PRIMARY KEY,
-            password TEXT,
-            score INTEGER,
-            role TEXT
-        )
-    """)
-    # Ajoute la colonne "role" si la base a été créée avant son ajout
-    colonnes_utilisateurs = {
-        colonne["name"] for colonne in db.execute("PRAGMA table_info(utilisateurs)").fetchall()
-    }
-    if "role" not in colonnes_utilisateurs:
-        db.execute("ALTER TABLE utilisateurs ADD COLUMN role TEXT")
-    # Table des quiz créés depuis le site (questions stockées en JSON)
-    db.execute("""
-        CREATE TABLE IF NOT EXISTS quizzes (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            titre TEXT NOT NULL,
-            description TEXT NOT NULL,
-            duree INTEGER NOT NULL,
-            questions TEXT NOT NULL,
-            visibilite TEXT NOT NULL DEFAULT 'public',
-            createur TEXT,
-            code_partage TEXT
-        )
-    """)
-    # Tables du futur modèle de données (quizz, questions, answers), utilisées par le formulaire de création
-    db.executescript("""
+            password TEXT
+        );
         CREATE TABLE IF NOT EXISTS quizz (
             id_quizz INTEGER PRIMARY KEY AUTOINCREMENT,
             title TEXT NOT NULL,
             description TEXT,
-            subject TEXT NOT NULL,
+            timer INTEGER NOT NULL DEFAULT 120,
             is_public INTEGER NOT NULL DEFAULT 0,
-            difficulty TEXT NOT NULL,
             code TEXT,
-            link TEXT NOT NULL,
-            timer INTEGER NOT NULL DEFAULT 120
+            origin TEXT,
+            date_quizz TEXT,
+            category TEXT,
+            difficulty TEXT,
+            login_creator TEXT NOT NULL
         );
         CREATE TABLE IF NOT EXISTS questions (
             id_question INTEGER PRIMARY KEY AUTOINCREMENT,
-            id_quizz INTEGER NOT NULL,
             question TEXT NOT NULL,
-            award INTEGER NOT NULL DEFAULT 0
+            award INTEGER NOT NULL DEFAULT 0,
+            id_quizz INTEGER NOT NULL,
+            FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
         );
         CREATE TABLE IF NOT EXISTS answers (
             id_answer INTEGER PRIMARY KEY AUTOINCREMENT,
+            text_answer TEXT NOT NULL,
+            is_correct INTEGER NOT NULL DEFAULT 0,
             id_question INTEGER NOT NULL,
-            answer TEXT NOT NULL,
-            is_correct INTEGER NOT NULL DEFAULT 0
+            FOREIGN KEY (id_question) REFERENCES questions(id_question)
         );
+        CREATE TABLE IF NOT EXISTS attempts (
+            id_attempt INTEGER PRIMARY KEY AUTOINCREMENT,
+            score INTEGER NOT NULL DEFAULT 0,
+            date_attempt TEXT NOT NULL,
+            login TEXT NOT NULL,
+            id_quizz INTEGER NOT NULL
+        );
+        CREATE TABLE IF NOT EXISTS folder (
+            id_folder INTEGER PRIMARY KEY AUTOINCREMENT,
+            name_folder TEXT NOT NULL,
+            format TEXT,
+            date_folder TEXT,
+            id_quizz INTEGER NOT NULL
+        );    
     """)
-    # Ajoute les colonnes manquantes de la table "quizzes"
-    colonnes_quiz = {
-        colonne["name"] for colonne in db.execute("PRAGMA table_info(quizzes)").fetchall()
-    }
-    if "visibilite" not in colonnes_quiz:
-        db.execute("ALTER TABLE quizzes ADD COLUMN visibilite TEXT NOT NULL DEFAULT 'public'")
-    if "createur" not in colonnes_quiz:
-        db.execute("ALTER TABLE quizzes ADD COLUMN createur TEXT")
-    if "code_partage" not in colonnes_quiz:
-        db.execute("ALTER TABLE quizzes ADD COLUMN code_partage TEXT")
-    # Deux quiz privés ne peuvent pas avoir le même code de partage
-    db.execute(
-        "CREATE UNIQUE INDEX IF NOT EXISTS idx_quizzes_code_partage "
-        "ON quizzes (code_partage) WHERE code_partage IS NOT NULL"
-    )
     db.commit()
-    return not table_exists
 
-# Execute to add 2 ppl to the database before doing tests
-# Does NOT need to be run every time we lunch the app.
+# Ajoute des utilisateurs de test si la table est vide
 def add_utilisateurs(tab = [("maram", "1234"), ("admin", "admin")]):
     db = get_db()
     for (login, mdp) in tab:
-        # Correction : on vérifie avec fetchone() si l'utilisateur existe déjà
         if db.execute("SELECT 1 FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
-            db.execute("INSERT INTO utilisateurs (login, password, score) VALUES (?, ?, ?)", (login, mdp, 0))
+            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
     db.commit()
 
-# Exécute une requête SQL et renvoie toutes les lignes du résultat
-def request_database(query, params=()):
-    db = get_db()
-    # Sécurisation contre les injections SQL via des paramètres
-    return db.execute(query, params).fetchall()
-
-# Renvoie True si l'identifiant existe et que le mot de passe correspond
-def verifier_identifiants(login, mdp):
-    db = get_db()
-    # Correction locale : fetchone() renvoie une ligne (ou None), pas directement le mot de passe
-    ligne = db.execute("SELECT password FROM utilisateurs WHERE login = ?", (login,)).fetchone()
-    return ligne is not None and ligne["password"] == mdp
-
-# Crée un compte ; renvoie False si l'identifiant est déjà pris
-def creer_utilisateur(login, mdp):
-    db = get_db()
-    # Vérifie si l'utilisateur existe déjà
-    if db.execute("SELECT * FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
-        # Insertion sécurisée
-        db.execute("INSERT INTO utilisateurs (login, password, score) VALUES (?, ?, ?)", (login, mdp, 0))
-        db.commit()
-        return True
-    return False
-# Supprime un compte ; renvoie True si une ligne a bien été supprimée
-def delete_utilisateur(login):
-    db = get_db()
-    curseur = db.execute("DELETE FROM utilisateurs WHERE login = ?", (login,))
-    db.commit()
-    return curseur.rowcount > 0
-# Correction locale : crée la table et les comptes de test au démarrage
-# (sinon la table "utilisateurs" n'existe pas et la connexion échoue)
+# Initialisation de la base au démarrage
 with app.app_context():
-    if create_table():
-        add_utilisateurs()
+    create_table()
+    add_utilisateurs()
 
-
-# Quiz factices en attendant le back-end
-# "duree" = temps limite en secondes, "reponse" = indice du bon choix
+# Quiz factices en mémoire (pour les tests rapides)
 FAUX_QUIZ = [
     {
         "id": 1,
@@ -191,227 +132,285 @@ FAUX_QUIZ = [
             {"texte": "Quel type est {} en Python ?", "choix": ["dict", "set", "list"], "reponse": 0},
         ],
     },
-    {
-        "id": 3,
-        "titre": "Géographie",
-        "description": "Capitales, pays et continents.",
-        "duree": 15,
-        "questions": [
-            {"texte": "Quelle est la capitale de la Tunisie ?", "choix": ["Sfax", "Tunis", "Sousse"], "reponse": 1},
-        ],
-    },
 ]
 
+# Fonction centrale : Récupération d'un quiz et de ses questions/réponses associées par id_quizz
+def trouver_quizz(id_quizz):
+    # 1. Vérifie d'abord parmi les quiz factices
+    for quizz in FAUX_QUIZ:
+        if str(quizz["id"]) == str(id_quizz):
+            return quizz
 
-# Renvoie le quiz correspondant à l'identifiant, ou None s'il n'existe pas
-def trouver_quiz(quiz_id):
-    # Cherche d'abord parmi les quiz factices
-    for quiz in FAUX_QUIZ:
-        if str(quiz["id"]) == str(quiz_id):
-            return quiz
+    # 2. Si c'est un quiz personnalisé de la base de données (ex: "custom-5" ou ID brut)
+    identifiant = str(id_quizz)
+    if identifiant.startswith("custom-"):
+        identifiant = identifiant[7:]
 
-    # Les quiz créés par les utilisateurs ont un identifiant de la forme "custom-<id>"
-    if str(quiz_id).startswith("custom-"):
-        # Retire le préfixe "custom-" pour garder l'id de la base
-        identifiant = str(quiz_id)[7:]
-        if identifiant.isdecimal():
-            ligne = get_db().execute(
-                "SELECT id, titre, description, duree, questions, visibilite, createur, code_partage "
-                "FROM quizzes WHERE id = ?",
-                (int(identifiant),),
-            ).fetchone()
-            # Convertit la ligne de la base au même format que les quiz factices
-            if ligne is not None:
-                return {
-                    "id": f"custom-{ligne['id']}",
-                    "titre": ligne["titre"],
-                    "description": ligne["description"],
-                    "duree": ligne["duree"],
-                    "questions": json.loads(ligne["questions"]),
-                    "visibilite": ligne["visibilite"],
-                    "createur": ligne["createur"],
-                    "code_partage": ligne["code_partage"],
-                }
+    if identifiant.isdecimal():
+        db = get_db()
+        # Récupération des informations principales du quiz
+        ligne_quizz = db.execute(
+            "SELECT id_quizz, title, description, timer, is_public, login_creator, code "
+            "FROM quizz WHERE id_quizz = ?",
+            (int(identifiant),),
+        ).fetchone()
+
+        if ligne_quizz is not None:
+            # Récupération des questions liées à cet id_quizz
+            lignes_questions = db.execute(
+                "SELECT id_question, question FROM questions WHERE id_quizz = ?",
+                (ligne_quizz["id_quizz"],)
+            ).fetchall()
+
+            questions_formattees = []
+            for q in lignes_questions:
+                # Récupération des réponses (choix) associées à cette question
+                lignes_reponses = db.execute(
+                    "SELECT text_answer, is_correct FROM answers WHERE id_question = ?",
+                    (q["id_question"],)
+                ).fetchall()
+
+                choix = [ans["text_answer"] for ans in lignes_reponses]
+                # Trouve l'index de la bonne réponse
+                reponse_idx = next((i for i, ans in enumerate(lignes_reponses) if ans["is_correct"] == 1), 0)
+
+                questions_formattees.append({
+                    "texte": q["question"],
+                    "choix": choix,
+                    "reponse": reponse_idx
+                })
+
+            return {
+                "id": f"custom-{ligne_quizz['id_quizz']}",
+                "titre": ligne_quizz["title"],
+                "description": ligne_quizz["description"],
+                "duree": ligne_quizz["timer"],
+                "questions": questions_formattees,
+                "visibilite": ligne_quizz["is_public"],
+                "createur": ligne_quizz["login_creator"],
+                "code": ligne_quizz["code"],
+            }
     return None
 
+# Authentification et gestion des utilisateurs
+def verifier_identifiants(login, mdp):
+    db = get_db()
+    ligne = db.execute("SELECT password FROM utilisateurs WHERE login = ?", (login,)).fetchone()
+    return ligne is not None and ligne["password"] == mdp
 
-# Caractères possibles pour un code de partage (sans 0, O, 1, I ni L, faciles à confondre)
-ALPHABET_CODE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
-LONGUEUR_CODE = 6
+def creer_utilisateur(login, mdp):
+    db = get_db()
+    if db.execute("SELECT * FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
+        db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
+        db.commit()
+        return True
+    return False
 
+def delete_utilisateur(login):
+    db = get_db()
+    curseur = db.execute("DELETE FROM utilisateurs WHERE login = ?", (login,))
+    db.commit()
+    return curseur.rowcount > 0
 
-# Génère un code de partage aléatoire de 6 caractères, pas encore utilisé par un autre quiz
-def generer_code_partage():
-    while True:
-        code = "".join(secrets.choice(ALPHABET_CODE) for _ in range(LONGUEUR_CODE))
-        if get_db().execute("SELECT 1 FROM quizzes WHERE code_partage = ?", (code,)).fetchone() is None:
-            return code
+# --- ROUTES FLASK ---
 
-
-# Enregistre un quiz (créé sur le site ou importé) ; un quiz privé reçoit un code de partage
-def enregistrer_quiz(titre, description, duree, questions, visibilite, createur):
-    code_partage = generer_code_partage() if visibilite == "prive" else None
-    # Les questions sont converties en texte JSON
-    get_db().execute(
-        "INSERT INTO quizzes (titre, description, duree, questions, visibilite, createur, code_partage) "
-        "VALUES (?, ?, ?, ?, ?, ?, ?)",
-        (titre, description, duree, json.dumps(questions, ensure_ascii=False), visibilite, createur, code_partage),
-    )
-    get_db().commit()
-
-
-# Route de la page de connexion (affichage et envoi du formulaire)
 @app.route("/login", methods=["GET", "POST"])
 def login():
-    # Si le formulaire a été envoyé
     if request.method == "POST":
-        # Récupère l'identifiant saisi
         login = request.form["login"]
-        # Récupère le mot de passe saisi
         mdp = request.form["mdp"]
-        # Si les identifiants sont corrects
         if verifier_identifiants(login, mdp):
-            # Mémorise l'utilisateur connecté dans la session
             session["utilisateur"] = login
-            # Redirige vers la page d'accueil
             return redirect(url_for("accueil"))
-        # Sinon, affiche un message d'erreur
         flash("Identifiant ou mot de passe incorrect.")
-    # Affiche la page de connexion
     return render_template("login.html")
 
-
-# Route de la page d'inscription (affichage et envoi du formulaire)
 @app.route("/inscription", methods=["GET", "POST"])
 def inscription():
-    # Si le formulaire a été envoyé
     if request.method == "POST":
-        # Récupère l'identifiant sans les espaces autour
         login = request.form["login"].strip()
-        # Récupère le mot de passe
         mdp = request.form["mdp"]
-        # Récupère la confirmation du mot de passe
         confirmation = request.form["confirmation"]
 
-        # Identifiant trop court
         if len(login) < 3:
             flash("L'identifiant doit contenir au moins 3 caractères.")
-        # Mot de passe trop court
         elif len(mdp) < 4:
             flash("Le mot de passe doit contenir au moins 4 caractères.")
-        # Les deux mots de passe sont différents
         elif mdp != confirmation:
             flash("Les mots de passe ne correspondent pas.")
-        # L'identifiant existe déjà
         elif not creer_utilisateur(login, mdp):
             flash("Cet identifiant est déjà utilisé.")
-        # Tout est valide
         else:
-            # Connecte directement le nouvel utilisateur
             session["utilisateur"] = login
-            # Redirige vers la page d'accueil
             return redirect(url_for("accueil"))
-
-    # Affiche la page d'inscription (avec les éventuelles erreurs)
     return render_template("inscription.html")
 
-
-# Route de la page d'accueil
 @app.route("/")
 def accueil():
-    # Utilisateur connecté, ou None pour un visiteur
     utilisateur = session.get("utilisateur")
-    # Quiz publics + quiz privés créés par l'utilisateur, du plus récent au plus ancien
-    quiz_crees = get_db().execute(
-        "SELECT id, titre, description, duree, questions, visibilite, createur, code_partage "
-        "FROM quizzes WHERE visibilite = 'public' OR createur = ? ORDER BY id DESC",
+    db = get_db()
+    quizz_crees = db.execute(
+        # nb_questions : nombre de questions du quiz, compté dans la table questions
+        "SELECT id_quizz, title, description, timer, is_public, login_creator, code, "
+        "(SELECT COUNT(*) FROM questions WHERE questions.id_quizz = quizz.id_quizz) AS nb_questions "
+        "FROM quizz WHERE is_public = 1 OR login_creator = ? ORDER BY id_quizz DESC",
         (utilisateur,),
     ).fetchall()
-    # Ajoute les quiz de la base aux quiz factices, au même format
+
     liste_quiz = FAUX_QUIZ + [
         {
-            "id": f"custom-{quiz['id']}",
-            "titre": quiz["titre"],
-            "description": quiz["description"],
-            "duree": quiz["duree"],
-            "questions": json.loads(quiz["questions"]),
-            "visibilite": quiz["visibilite"],
-            # Le code et le lien de partage ne sont montrés qu'au créateur du quiz
-            "code_partage": quiz["code_partage"] if quiz["createur"] == utilisateur else None,
+            "id": f"custom-{q['id_quizz']}",
+            "titre": q["title"],
+            "description": q["description"],
+            "duree": q["timer"],
+            "nb_questions": q["nb_questions"],
+            "visibilite": q["is_public"],
+            "code_partage": q["code"] if q["login_creator"] == utilisateur else None,
             "lien_partage": url_for(
-                "quiz",
-                quiz_id=f"custom-{quiz['id']}",
-                code=quiz["code_partage"],
+                "quizz_route",
+                quiz_id=f"custom-{q['id_quizz']}",
+                code=q["code"],
                 _external=True,
-            ) if quiz["visibilite"] == "prive" and quiz["createur"] == utilisateur else None,
+            ) if q["is_public"] == 0 and q["login_creator"] == utilisateur else None,
         }
-        for quiz in quiz_crees
+        for q in quizz_crees
     ]
     return render_template("accueil.html", utilisateur=utilisateur, liste_quiz=liste_quiz)
 
+# Règles des quiz (README) : 1 à 20 questions, 2 à 6 réponses, une seule bonne réponse
+NB_QUESTIONS_MAX = 20
+NB_REPONSES_MIN = 2
+NB_REPONSES_MAX = 6
+DIFFICULTES = {"Facile", "Moyen", "Difficile"}
+# Code de partage des quiz privés : 6 caractères, sans les lettres et chiffres faciles à confondre (O/0, I/1, L)
+ALPHABET_CODE = "ABCDEFGHJKMNPQRSTUVWXYZ23456789"
+LONGUEUR_CODE = 6
 
-# Route de création d'un quiz (envoi du formulaire)
+# Génère un code de partage de 6 caractères, pas encore utilisé par un autre quiz
+def generer_code_partage():
+    while True:
+        code = "".join(secrets.choice(ALPHABET_CODE) for _ in range(LONGUEUR_CODE))
+        if get_db().execute("SELECT 1 FROM quizz WHERE code = ?", (code,)).fetchone() is None:
+            return code
+
+# Lit les questions envoyées par le formulaire de création. Noms des champs :
+# questions[i][question], questions[i][award], questions[i][answers][j][answer]
+# et questions[i][correct] (numéro de la bonne réponse).
+# Renvoie (liste des questions, None) si tout est correct, sinon (None, message d'erreur).
+def lire_questions_formulaire(form):
+    questions = []
+    i = 0
+    while f"questions[{i}][question]" in form:
+        numero = i + 1
+        if numero > NB_QUESTIONS_MAX:
+            return None, f"Un quiz contient au maximum {NB_QUESTIONS_MAX} questions."
+
+        texte = form.get(f"questions[{i}][question]", "").strip()
+        award = form.get(f"questions[{i}][award]", "1").strip()
+        bonne = form.get(f"questions[{i}][correct]", "")
+        reponses = []
+        while f"questions[{i}][answers][{len(reponses)}][answer]" in form:
+            reponses.append(form.get(f"questions[{i}][answers][{len(reponses)}][answer]", "").strip())
+
+        if not texte:
+            return None, f"La question {numero} n'a pas d'énoncé."
+        if not award.isdecimal():
+            return None, f"Les points de la question {numero} doivent être un nombre positif."
+        if not NB_REPONSES_MIN <= len(reponses) <= NB_REPONSES_MAX:
+            return None, f"La question {numero} doit avoir entre {NB_REPONSES_MIN} et {NB_REPONSES_MAX} réponses."
+        if any(not reponse for reponse in reponses):
+            return None, f"Une réponse de la question {numero} est vide."
+        if not bonne.isdecimal() or int(bonne) >= len(reponses):
+            return None, f"Choisissez la bonne réponse de la question {numero}."
+
+        questions.append({
+            "question": texte,
+            "award": int(award),
+            "reponses": reponses,
+            "bonne": int(bonne),
+        })
+        i += 1
+
+    if not questions:
+        return None, "Ajoutez au moins une question."
+    return questions, None
+
+# Enregistre un quiz dans quizz, puis ses questions et leurs réponses (is_correct = 1 pour la bonne).
+# questions : liste de {"question", "award", "reponses", "bonne"} (numéro de la bonne réponse).
+# origin : "saisie" (formulaire de création) ou "import" (fichier texte).
+# Renvoie le code de partage du quiz s'il est privé, sinon None.
+def enregistrer_quizz(title, description, timer, is_public, category, difficulty, origin, questions):
+    # Un quiz privé (is_public = 0) reçoit un code de partage
+    code = generer_code_partage() if is_public == 0 else None
+    db = get_db()
+
+    # 1. Insertion du quiz
+    id_quizz = db.execute(
+        "INSERT INTO quizz (title, description, timer, is_public, code, origin, date_quizz, "
+        "category, difficulty, login_creator) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (title, description, timer, is_public, code, origin,
+         datetime.now().strftime("%Y-%m-%d %H:%M:%S"), category, difficulty, session["utilisateur"]),
+    ).lastrowid
+
+    # 2. Insertion de chaque question, puis de ses réponses
+    for question in questions:
+        id_question = db.execute(
+            "INSERT INTO questions (question, award, id_quizz) VALUES (?, ?, ?)",
+            (question["question"], question["award"], id_quizz),
+        ).lastrowid
+        for index, texte_reponse in enumerate(question["reponses"]):
+            db.execute(
+                "INSERT INTO answers (text_answer, is_correct, id_question) VALUES (?, ?, ?)",
+                (texte_reponse, 1 if index == question["bonne"] else 0, id_question),
+            )
+
+    db.commit()
+    return code
+
+# Route de création d'un quiz : enregistre le quiz dans quizz, puis ses questions et leurs réponses
 @app.route("/quiz/creer", methods=["POST"])
-def creer_quiz():
-    # Réservé aux utilisateurs connectés
+def creer_quizz():
     if "utilisateur" not in session:
         return redirect(url_for("login"))
 
-    # Récupère les champs du formulaire (une liste par colonne pour les questions)
-    titre = request.form.get("titre", "").strip()
+    title = request.form.get("title", "").strip()
     description = request.form.get("description", "").strip()
-    duree = request.form.get("duree", "").strip()
-    visibilite = request.form.get("visibilite", "public")
-    textes = request.form.getlist("question_text[]")
-    choix_a = request.form.getlist("choix_a[]")
-    choix_b = request.form.getlist("choix_b[]")
-    choix_c = request.form.getlist("choix_c[]")
-    bonnes_reponses = request.form.getlist("bonne_reponse[]")
+    category = request.form.get("subject", "").strip()
+    difficulty = request.form.get("difficulty", "")
+    timer = request.form.get("timer", "").strip()
+    is_public = request.form.get("is_public", "1")
 
-    # Vérifie chaque champ ; en cas d'erreur, message et retour à l'accueil
-    if not titre or len(titre) > 100:
-        flash("Le titre est obligatoire et ne doit pas dépasser 100 caractères.", "erreur")
-        return redirect(url_for("accueil"))
-    if len(description) > 300:
-        flash("La description ne doit pas dépasser 300 caractères.", "erreur")
-        return redirect(url_for("accueil"))
-    if not duree.isdecimal() or not 10 <= int(duree) <= 3600:
-        flash("La durée doit être comprise entre 10 et 3600 secondes.", "erreur")
-        return redirect(url_for("accueil"))
-    if visibilite not in {"public", "prive"}:
-        flash("Choisissez une visibilité valide pour le quiz.", "erreur")
-        return redirect(url_for("accueil"))
-    # Entre 1 et 20 questions, et toutes les listes doivent avoir la même taille
-    if not 1 <= len(textes) <= 20 or not (
-        len(textes) == len(choix_a) == len(choix_b) == len(choix_c) == len(bonnes_reponses)
-    ):
-        flash("Ajoutez entre 1 et 20 questions complètes.", "erreur")
+    # Vérifie les informations du quiz ; en cas d'erreur, message et retour à l'accueil
+    erreur = None
+    if not title or len(title) > 100:
+        erreur = "Le titre est obligatoire et ne doit pas dépasser 100 caractères."
+    elif len(description) > 300:
+        erreur = "La description ne doit pas dépasser 300 caractères."
+    elif not category or len(category) > 100:
+        erreur = "Le sujet est obligatoire et ne doit pas dépasser 100 caractères."
+    elif difficulty not in DIFFICULTES:
+        erreur = "Choisissez une difficulté."
+    elif not timer.isdecimal() or not 10 <= int(timer) <= 3600:
+        erreur = "La durée doit être comprise entre 10 et 3600 secondes."
+    elif is_public not in {"0", "1"}:
+        erreur = "Choisissez une visibilité valide pour le quiz."
+    questions = None
+    if erreur is None:
+        questions, erreur = lire_questions_formulaire(request.form)
+    if erreur is not None:
+        flash(erreur, "erreur")
         return redirect(url_for("accueil"))
 
-    # Regroupe les champs de chaque question dans un dictionnaire
-    questions = []
-    for texte, option_a, option_b, option_c, bonne_reponse in zip(
-        textes, choix_a, choix_b, choix_c, bonnes_reponses
-    ):
-        texte = texte.strip()
-        choix = [option_a.strip(), option_b.strip(), option_c.strip()]
-        if not texte or any(not option for option in choix) or bonne_reponse not in {"0", "1", "2"}:
-            flash("Chaque question doit avoir un énoncé, trois choix et une bonne réponse.", "erreur")
-            return redirect(url_for("accueil"))
-        questions.append({
-            "texte": texte,
-            "choix": choix,
-            "reponse": int(bonne_reponse),
-        })
-
-    enregistrer_quiz(titre, description, int(duree), questions, visibilite, session["utilisateur"])
-    flash("Votre quiz a été créé.", "succes")
+    code = enregistrer_quizz(title, description, int(timer), int(is_public), category, difficulty,
+                             "saisie", questions)
+    if code:
+        flash(f"Votre quiz a été créé. Code de partage : {code}", "succes")
+    else:
+        flash("Votre quiz a été créé avec succès.", "succes")
     return redirect(url_for("accueil"))
-
 
 # Taille maximale d'un document envoyé pour générer un quiz (5 Mo)
 TAILLE_DOCUMENT_MAX = 5_000_000
-
 
 # Génération factice en attendant le vrai générateur (côté backend) :
 # renvoie des questions d'exemple pour pouvoir tester l'interface d'import.
@@ -428,15 +427,12 @@ def generer_quiz_factice(nom_fichier, nb_questions):
     ]
     return {"titre": titre, "questions": questions}
 
-
 # Route de la page d'import (générer un quiz à partir d'un document, ou importer un quiz écrit)
 @app.route("/quiz/importer")
 def importer_quiz():
-    # Réservé aux utilisateurs connectés
     if "utilisateur" not in session:
         return redirect(url_for("login"))
     return render_template("importer.html")
-
 
 # Analyse le fichier envoyé par la page d'import et renvoie le quiz en JSON, sans l'enregistrer
 @app.route("/quiz/importer/analyser", methods=["POST"])
@@ -487,8 +483,8 @@ def analyser_import():
 
     return jsonify(erreurs=["Choisissez ce que vous voulez faire du fichier."]), 400
 
-
 # Enregistre le quiz relu et corrigé dans la page d'import (données envoyées en JSON)
+# dans les tables quizz, questions et answers, avec origin = "import"
 @app.route("/quiz/importer/enregistrer", methods=["POST"])
 def enregistrer_import():
     if "utilisateur" not in session:
@@ -509,131 +505,108 @@ def enregistrer_import():
     if erreurs:
         return jsonify(erreurs=erreurs), 400
 
-    enregistrer_quiz(
-        titre.strip(),
-        "Importé depuis un fichier.",
-        duree,
-        questions,
-        visibilite,
-        session["utilisateur"],
-    )
-    nb = len(questions)
-    flash(f"Le quiz « {titre.strip()} » a été enregistré ({nb} question{'s' if nb > 1 else ''}).", "succes")
+    # Convertit les questions au format de enregistrer_quizz (1 point par question)
+    questions_base = [
+        {"question": q["texte"], "award": 1, "reponses": q["choix"], "bonne": q["reponse"]}
+        for q in questions
+    ]
+    titre = titre.strip()
+    # Pas de sujet ni de difficulté dans le format d'import : colonnes laissées vides (NULL)
+    code = enregistrer_quizz(titre, "Importé depuis un fichier.", duree, 1 if visibilite == "public" else 0,
+                             None, None, "import", questions_base)
+
+    nb = len(questions_base)
+    message = f"Le quiz « {titre} » a été enregistré ({nb} question{'s' if nb > 1 else ''})."
+    if code:
+        message += f" Code de partage : {code}"
+    flash(message, "succes")
     return jsonify(redirection=url_for("accueil"))
 
-
-# Route pour rejoindre un quiz privé avec son code de partage
 @app.route("/rejoindre", methods=["GET", "POST"])
 def rejoindre_quiz():
-    # Si le formulaire a été envoyé
     if request.method == "POST":
-        # Les codes sont en majuscules : on accepte aussi une saisie en minuscules
+        # Le champ du formulaire s'appelle "code_partage" (rejoindre.html)
         code = request.form.get("code_partage", "").strip().upper()
-        # Cherche le quiz privé qui correspond au code
-        quiz_prive = get_db().execute(
-            "SELECT id FROM quizzes WHERE visibilite = 'prive' AND code_partage = ?",
+        db = get_db()
+        quiz_prive = db.execute(
+            "SELECT id_quizz FROM quizz WHERE is_public = 0 AND code = ?",
             (code,),
         ).fetchone()
         if quiz_prive is None:
             flash("Code de partage invalide.", "erreur")
             return render_template("rejoindre.html")
-        # Code correct : ouvre le quiz en passant le code dans l'URL
-        return redirect(url_for("quiz", quiz_id=f"custom-{quiz_prive['id']}", code=code))
-    # Affiche le formulaire de saisie du code
+        return redirect(url_for("quizz_route", quiz_id=f"custom-{quiz_prive['id_quizz']}", code=code))
     return render_template("rejoindre.html")
 
-
-# Route d'un quiz (affichage des questions et envoi des réponses)
+# Route d'un quiz (paramètre renommé quiz_id pour concorder avec l'URL)
 @app.route("/quiz/<quiz_id>", methods=["GET", "POST"])
-def quiz(quiz_id):
-    # Récupère le quiz demandé
-    quiz = trouver_quiz(quiz_id)
-    # Quiz introuvable : page 404
-    if quiz is None:
+def quizz_route(quiz_id):
+    quizz = trouver_quizz(quiz_id)
+    if quizz is None:
         abort(404)
 
-    # Quiz privé : accessible au créateur ou à quelqu'un qui a le bon code
-    if quiz.get("visibilite") == "prive":
-        autorise = session.get("utilisateur") == quiz["createur"]
-        # Bon code dans l'URL : on le retient dans la session pour les prochaines visites
-        if quiz["code_partage"] and request.args.get("code") == quiz["code_partage"]:
+    # Gestion des quiz privés
+    if quizz.get("visibilite") == 0:
+        autorise = session.get("utilisateur") == quizz.get("createur")
+        if quizz.get("code") and request.args.get("code") == quizz["code"]:
             autorise = True
             quizs_autorises = session.setdefault("quiz_prives_autorises", [])
             if quiz_id not in quizs_autorises:
                 quizs_autorises.append(quiz_id)
-        # Code déjà saisi auparavant dans cette session
         if quiz_id in session.get("quiz_prives_autorises", []):
             autorise = True
-        # Sinon, on demande le code de partage
         if not autorise:
             return redirect(url_for("rejoindre_quiz"))
-    # Autre visibilité non publique : connexion obligatoire
-    elif quiz.get("visibilite", "public") != "public" and "utilisateur" not in session:
-        return redirect(url_for("login"))
 
-    # Si le formulaire a été envoyé (par l'utilisateur ou par le minuteur)
     if request.method == "POST":
-        # Compte les bonnes réponses (une question sans réponse compte faux)
         score = 0
-        for i, question in enumerate(quiz["questions"]):
+        for i, question in enumerate(quizz["questions"]):
             if request.form.get(f"q{i}") == str(question["reponse"]):
                 score += 1
-        message = f"{quiz['titre']} : {score} / {len(quiz['questions'])} bonnes réponses."
-        # Le minuteur a envoyé le formulaire tout seul
+        message = f"{quizz['titre']} : {score} / {len(quizz['questions'])} bonnes réponses."
         if request.form.get("temps_ecoule") == "1":
             message = "Temps écoulé ! " + message
-        # Visiteur non connecté : le résultat s'affiche directement sur la page du quiz
+        
         if "utilisateur" not in session:
-            return render_template("quiz.html", quiz=quiz, resultat=message)
+            return render_template("quiz.html", quiz=quizz, resultat=message)
         flash(message, "succes")
-        # Retour à l'accueil (à remplacer par la page de résultat)
         return redirect(url_for("accueil"))
 
-    # Affiche les questions du quiz
-    return render_template("quiz.html", quiz=quiz)
+    return render_template("quiz.html", quiz=quizz)
 
-
-# Route de l'historique des scores (page à compléter)
 @app.route("/historique")
 def historique():
     if "utilisateur" not in session:
         return redirect(url_for("login"))
     return render_template("bientot.html", titre="Historique")
 
+@app.route("/admin")
+def admin():
+    if "utilisateur" not in session:
+        return redirect(url_for("login"))
+    if session["utilisateur"] != "admin":
+        flash("Accès réservé à l'administrateur.")
+        return redirect(url_for("accueil"))
+    return render_template("bientot.html", titre="Administration")
 
-# Route de déconnexion
 @app.route("/logout")
 def logout():
-    # Vide la session (déconnecte l'utilisateur)
     session.clear()
-    # Redirige vers la page de connexion
     return redirect(url_for("login"))
 
-
-# Route de suppression du compte de l'utilisateur connecté
 @app.route("/supprimer-compte", methods=["POST"])
 def supprimer_compte():
     login = session.get("utilisateur")
-    # Personne n'est connecté : retour à la connexion
     if login is None:
         return redirect(url_for("login"))
-
-    # Échec de la suppression (compte introuvable)
     if not delete_utilisateur(login):
         flash("Impossible de supprimer le compte.", "erreur")
         return redirect(url_for("accueil"))
-
-    # Déconnecte l'utilisateur puis le renvoie vers la page de connexion
     session.clear()
     flash("Votre compte a été supprimé.", "succes")
     return redirect(url_for("login"))
 
-
-# Exécuté seulement si on lance ce fichier directement
 if __name__ == "__main__":
-    # Évite d'ouvrir le navigateur deux fois quand le mode debug redémarre le serveur
     if os.environ.get("WERKZEUG_RUN_MAIN") != "true":
-        # Ouvre la page de connexion dans le navigateur
         webbrowser.open("http://127.0.0.1:5000/login")
-    # Lance le serveur en mode debug
     app.run(debug=True)

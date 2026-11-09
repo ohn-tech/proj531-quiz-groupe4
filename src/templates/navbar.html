@@ -5,7 +5,7 @@
 
     {# Liens de navigation : le lien de la page courante reçoit la classe "actif" #}
     <nav class="nav-liens" id="nav-liens">
-        <a href="{{ url_for('accueil') }}" class="{{ 'actif' if request.endpoint in ['accueil', 'quiz'] }}">Accueil</a>
+        <a href="{{ url_for('accueil') }}" class="{{ 'actif' if request.endpoint in ['accueil', 'quizz_route'] }}">Accueil</a>
         <a href="{{ url_for('historique') }}" class="{{ 'actif' if request.endpoint == 'historique' }}">Historique</a>
         <a href="{{ url_for('importer_quiz') }}" class="{{ 'actif' if request.endpoint == 'importer_quiz' }}">Importer</a>
     </nav>
