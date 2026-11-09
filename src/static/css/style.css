@@ -564,7 +564,7 @@ body.page-large {
     border-color: var(--erreur);
 }
 
-.answer-option input[type="checkbox"] {
+.answer-option input[type="radio"] {
     width: 1.15rem;
     height: 1.15rem;
     flex: 0 0 auto;
