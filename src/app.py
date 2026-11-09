@@ -249,9 +249,11 @@ def inscription():
 def accueil():
     utilisateur = session.get("utilisateur")
     db = get_db()
+    # Liste des quiz : les quiz publics, plus les quiz privés de l'utilisateur connecté.
+    # Les quiz privés des autres sont masqués (on y accède seulement avec leur code de partage).
     quizz_crees = db.execute(
         # nb_questions : nombre de questions du quiz, compté dans la table questions
-        "SELECT id_quizz, title, description, timer, is_public, login_creator, code, "
+        "SELECT id_quizz, title, description, timer, is_public, login_creator, code, category, difficulty, "
         "(SELECT COUNT(*) FROM questions WHERE questions.id_quizz = quizz.id_quizz) AS nb_questions "
         "FROM quizz WHERE is_public = 1 OR login_creator = ? ORDER BY id_quizz DESC",
         (utilisateur,),
@@ -265,6 +267,10 @@ def accueil():
             "duree": q["timer"],
             "nb_questions": q["nb_questions"],
             "visibilite": q["is_public"],
+            # Sujet et difficulté : vides (None) pour les quiz importés depuis un fichier
+            "sujet": q["category"],
+            "difficulte": q["difficulty"],
+            "createur": q["login_creator"],
             "code_partage": q["code"] if q["login_creator"] == utilisateur else None,
             "lien_partage": url_for(
                 "quizz_route",
