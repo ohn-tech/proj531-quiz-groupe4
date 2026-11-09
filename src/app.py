@@ -9,7 +9,9 @@ import secrets
 # Module pour enregistrer la date de création d'un quiz
 from datetime import datetime
 # Importe les outils Flask nécessaires
-from flask import Flask, render_template, request, redirect, url_for, session, flash, abort
+from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
+# Lecture des quiz importés depuis un fichier texte, et vérification avant enregistrement
+from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX
 
 # Crée l'application Flask
 app = Flask(__name__)
@@ -333,6 +335,38 @@ def lire_questions_formulaire(form):
         return None, "Ajoutez au moins une question."
     return questions, None
 
+# Enregistre un quiz dans quizz, puis ses questions et leurs réponses (is_correct = 1 pour la bonne).
+# questions : liste de {"question", "award", "reponses", "bonne"} (numéro de la bonne réponse).
+# origin : "saisie" (formulaire de création) ou "import" (fichier texte).
+# Renvoie le code de partage du quiz s'il est privé, sinon None.
+def enregistrer_quizz(title, description, timer, is_public, category, difficulty, origin, questions):
+    # Un quiz privé (is_public = 0) reçoit un code de partage
+    code = generer_code_partage() if is_public == 0 else None
+    db = get_db()
+
+    # 1. Insertion du quiz
+    id_quizz = db.execute(
+        "INSERT INTO quizz (title, description, timer, is_public, code, origin, date_quizz, "
+        "category, difficulty, login_creator) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
+        (title, description, timer, is_public, code, origin,
+         datetime.now().strftime("%Y-%m-%d %H:%M:%S"), category, difficulty, session["utilisateur"]),
+    ).lastrowid
+
+    # 2. Insertion de chaque question, puis de ses réponses
+    for question in questions:
+        id_question = db.execute(
+            "INSERT INTO questions (question, award, id_quizz) VALUES (?, ?, ?)",
+            (question["question"], question["award"], id_quizz),
+        ).lastrowid
+        for index, texte_reponse in enumerate(question["reponses"]):
+            db.execute(
+                "INSERT INTO answers (text_answer, is_correct, id_question) VALUES (?, ?, ?)",
+                (texte_reponse, 1 if index == question["bonne"] else 0, id_question),
+            )
+
+    db.commit()
+    return code
+
 # Route de création d'un quiz : enregistre le quiz dans quizz, puis ses questions et leurs réponses
 @app.route("/quiz/creer", methods=["POST"])
 def creer_quizz():
@@ -367,38 +401,126 @@ def creer_quizz():
         flash(erreur, "erreur")
         return redirect(url_for("accueil"))
 
-    # Un quiz privé (is_public = 0) reçoit un code de partage
-    is_public = int(is_public)
-    code = generer_code_partage() if is_public == 0 else None
-    db = get_db()
-
-    # 1. Insertion du quiz
-    cursor = db.execute(
-        "INSERT INTO quizz (title, description, timer, is_public, code, origin, date_quizz, "
-        "category, difficulty, login_creator) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)",
-        (title, description, int(timer), is_public, code, "formulaire",
-         datetime.now().strftime("%Y-%m-%d %H:%M:%S"), category, difficulty, session["utilisateur"]),
-    )
-    id_quizz = cursor.lastrowid
-
-    # 2. Insertion de chaque question, puis de ses réponses (is_correct = 1 pour la bonne)
-    for question in questions:
-        id_question = db.execute(
-            "INSERT INTO questions (question, award, id_quizz) VALUES (?, ?, ?)",
-            (question["question"], question["award"], id_quizz),
-        ).lastrowid
-        for index, texte_reponse in enumerate(question["reponses"]):
-            db.execute(
-                "INSERT INTO answers (text_answer, is_correct, id_question) VALUES (?, ?, ?)",
-                (texte_reponse, 1 if index == question["bonne"] else 0, id_question),
-            )
-
-    db.commit()
+    code = enregistrer_quizz(title, description, int(timer), int(is_public), category, difficulty,
+                             "saisie", questions)
     if code:
         flash(f"Votre quiz a été créé. Code de partage : {code}", "succes")
     else:
         flash("Votre quiz a été créé avec succès.", "succes")
     return redirect(url_for("accueil"))
+
+# Taille maximale d'un document envoyé pour générer un quiz (5 Mo)
+TAILLE_DOCUMENT_MAX = 5_000_000
+
+# Génération factice en attendant le vrai générateur (côté backend) :
+# renvoie des questions d'exemple pour pouvoir tester l'interface d'import.
+# À remplacer par la vraie génération à partir du texte du document.
+def generer_quiz_factice(nom_fichier, nb_questions):
+    titre = os.path.splitext(nom_fichier)[0].strip()[:100] or "Quiz généré"
+    questions = [
+        {
+            "texte": f"Question d'exemple n° {numero} (à remplacer par le vrai générateur)",
+            "choix": ["Bonne réponse", "Mauvaise réponse A", "Mauvaise réponse B", "Mauvaise réponse C"],
+            "reponse": 0,
+        }
+        for numero in range(1, nb_questions + 1)
+    ]
+    return {"titre": titre, "questions": questions}
+
+# Route de la page d'import (générer un quiz à partir d'un document, ou importer un quiz écrit)
+@app.route("/quiz/importer")
+def importer_quiz():
+    if "utilisateur" not in session:
+        return redirect(url_for("login"))
+    return render_template("importer.html")
+
+# Analyse le fichier envoyé par la page d'import et renvoie le quiz en JSON, sans l'enregistrer
+@app.route("/quiz/importer/analyser", methods=["POST"])
+def analyser_import():
+    if "utilisateur" not in session:
+        return jsonify(erreurs=["Votre session a expiré. Reconnectez-vous puis recommencez."]), 401
+
+    fichier = request.files.get("fichier")
+    mode = request.form.get("mode")
+    if fichier is None or not fichier.filename:
+        return jsonify(erreurs=["Choisissez un fichier à importer."]), 400
+    extension = os.path.splitext(fichier.filename)[1].lower()
+
+    # Mode « quiz déjà écrit » : fichier texte au format QUIZ: / Q: / + / -
+    if mode == "quiz":
+        if extension != ".txt":
+            return jsonify(erreurs=["Un quiz déjà écrit doit être un fichier texte (.txt)."]), 400
+        # Un octet de plus que la limite pour détecter un fichier trop gros
+        quiz_lu, erreurs = lire_fichier(fichier.read(TAILLE_FICHIER_MAX + 1))
+        if erreurs:
+            return jsonify(erreurs=erreurs), 400
+        return jsonify(titre=quiz_lu["titre"], questions=quiz_lu["questions"], simule=False)
+
+    # Mode « document » : un cours en TXT ou PDF, à partir duquel on génère les questions
+    if mode == "document":
+        if extension not in {".txt", ".pdf"}:
+            return jsonify(erreurs=["Le document doit être un fichier TXT ou PDF."]), 400
+        nb_questions = request.form.get("nb_questions", "")
+        if not nb_questions.isdecimal() or not 1 <= int(nb_questions) <= NB_QUESTIONS_MAX:
+            return jsonify(erreurs=[f"Choisissez entre 1 et {NB_QUESTIONS_MAX} questions."]), 400
+
+        contenu = fichier.read(TAILLE_DOCUMENT_MAX + 1)
+        if not contenu:
+            return jsonify(erreurs=["Le fichier est vide."]), 400
+        if len(contenu) > TAILLE_DOCUMENT_MAX:
+            return jsonify(erreurs=["Le document est trop volumineux (5 Mo maximum)."]), 400
+        # Vérifie que le fichier est bien ce que son extension annonce
+        if extension == ".pdf" and not contenu.startswith(b"%PDF"):
+            return jsonify(erreurs=["Ce fichier n'est pas un PDF valide."]), 400
+        if extension == ".txt":
+            try:
+                contenu.decode("utf-8-sig")
+            except UnicodeDecodeError:
+                return jsonify(erreurs=["Le fichier texte doit être encodé en UTF-8."]), 400
+
+        quiz_genere = generer_quiz_factice(fichier.filename, int(nb_questions))
+        return jsonify(titre=quiz_genere["titre"], questions=quiz_genere["questions"], simule=True)
+
+    return jsonify(erreurs=["Choisissez ce que vous voulez faire du fichier."]), 400
+
+# Enregistre le quiz relu et corrigé dans la page d'import (données envoyées en JSON)
+# dans les tables quizz, questions et answers, avec origin = "import"
+@app.route("/quiz/importer/enregistrer", methods=["POST"])
+def enregistrer_import():
+    if "utilisateur" not in session:
+        return jsonify(erreurs=["Votre session a expiré. Reconnectez-vous puis recommencez."]), 401
+
+    donnees = request.get_json(silent=True)
+    if not isinstance(donnees, dict):
+        return jsonify(erreurs=["Données invalides."]), 400
+
+    titre = donnees.get("titre")
+    visibilite = donnees.get("visibilite")
+    duree = donnees.get("duree")
+    questions, erreurs = verifier_quiz(titre, donnees.get("questions"))
+    if visibilite not in {"public", "prive"}:
+        erreurs.append("Choisissez une visibilité valide pour le quiz.")
+    if isinstance(duree, bool) or not isinstance(duree, int) or not 10 <= duree <= 3600:
+        erreurs.append("Le minuteur doit être compris entre 10 et 3600 secondes.")
+    if erreurs:
+        return jsonify(erreurs=erreurs), 400
+
+    # Convertit les questions au format de enregistrer_quizz (1 point par question)
+    questions_base = [
+        {"question": q["texte"], "award": 1, "reponses": q["choix"], "bonne": q["reponse"]}
+        for q in questions
+    ]
+    titre = titre.strip()
+    # Pas de sujet ni de difficulté dans le format d'import : colonnes laissées vides (NULL)
+    code = enregistrer_quizz(titre, "Importé depuis un fichier.", duree, 1 if visibilite == "public" else 0,
+                             None, None, "import", questions_base)
+
+    nb = len(questions_base)
+    message = f"Le quiz « {titre} » a été enregistré ({nb} question{'s' if nb > 1 else ''})."
+    if code:
+        message += f" Code de partage : {code}"
+    flash(message, "succes")
+    return jsonify(redirection=url_for("accueil"))
 
 @app.route("/rejoindre", methods=["GET", "POST"])
 def rejoindre_quiz():
