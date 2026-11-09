@@ -10,7 +10,7 @@ Plateforme web en Python (Flask) où chaque utilisateur peut créer ses propres 
   - import d'un quiz déjà écrit dans un fichier texte
   - génération automatique à partir d'un document (TXT ou PDF) grâce à une IA
 - Chaque quiz a un thème et une difficulté (facile, moyen, difficile)
-- Le créateur d'un quiz en est l'administrateur : lui seul peut le modifier ou le supprimer
+- Le créateur d'un quiz en est l'administrateur : lui seul peut le supprimer
 - Quiz publics (visibles par tous) ou privés (accessibles avec un code de 6 caractères fourni par le créateur)
 - Affichage du score final et des bonnes réponses
 - Historique des scores de chaque utilisateur
