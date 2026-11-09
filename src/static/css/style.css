@@ -1418,3 +1418,20 @@ body.page-large .succes {
         flex: 1;
     }
 }
+
+/* Bouton « Supprimer » d'un quiz, visible seulement par son créateur */
+.btn-supprimer {
+    margin-top: 8px;
+    width: 100%;
+    padding: 8px 12px;
+    border: 1px solid #c0392b;
+    border-radius: 8px;
+    background: transparent;
+    color: #c0392b;
+    font: inherit;
+    cursor: pointer;
+}
+.btn-supprimer:hover {
+    background: #c0392b;
+    color: #ffffff;
+}
