@@ -28,6 +28,8 @@ DATABASE = os.path.join(app.root_path, "quizzapp.db")
 def get_db():
     if 'db' not in g:
         g.db = sqlite3.connect(DATABASE)
+        # Active les contraintes de clés étrangères pour cette connexion
+        g.db.execute("PRAGMA foreign_keys = ON")
         # Permet d'accéder aux colonnes par leur nom : ligne["login"]
         g.db.row_factory = sqlite3.Row
     return g.db
@@ -438,25 +440,81 @@ def quizz_route(quiz_id):
 
     if request.method == "POST":
         score = 0
+        date_actuelle = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
+
+        # Calcul du nombre de bonnes réponses
         for i, question in enumerate(quizz["questions"]):
             if request.form.get(f"q{i}") == str(question["reponse"]):
                 score += 1
+
+        # Enregistrement uniquement pour un utilisateur connecté
+        # et pour un quiz enregistré en base (les quiz factices ont un id entier).
+        if "utilisateur" in session and str(quizz["id"]).startswith("custom-"):
+            db = get_db()
+            id_quizz = int(str(quizz["id"]).replace("custom-", "", 1))
+
+            db.execute(
+                """
+                INSERT INTO attempts (score, date_attempt, login, id_quizz)
+                VALUES (?, ?, ?, ?)
+                """,
+                (score, date_actuelle, session["utilisateur"], id_quizz)
+            )
+            db.commit()
+
         message = f"{quizz['titre']} : {score} / {len(quizz['questions'])} bonnes réponses."
         if request.form.get("temps_ecoule") == "1":
             message = "Temps écoulé ! " + message
-        
+
         if "utilisateur" not in session:
             return render_template("quiz.html", quiz=quizz, resultat=message)
+
         flash(message, "succes")
         return redirect(url_for("accueil"))
 
     return render_template("quiz.html", quiz=quizz)
 
+
+def historique_utilisateur(login):
+    """Renvoie les tentatives d'un utilisateur, de la plus récente à la plus ancienne."""
+    db = get_db()
+
+    lignes = db.execute("""
+        SELECT
+            a.id_quizz,
+            q.title AS titre,
+            a.score,
+            a.date_attempt AS date,
+            (
+                SELECT COUNT(*)
+                FROM questions
+                WHERE questions.id_quizz = a.id_quizz
+            ) AS nb_questions
+        FROM attempts AS a
+        LEFT JOIN quizz AS q ON q.id_quizz = a.id_quizz
+        WHERE a.login = ?
+        ORDER BY a.date_attempt DESC
+    """, (login,)).fetchall()
+
+    return [
+        {
+            "id_quizz": int(ligne["id_quizz"]),
+            "titre": ligne["titre"],
+            "score": int(ligne["score"]),
+            "nb_questions": int(ligne["nb_questions"]),
+            "date": ligne["date"]
+        }
+        for ligne in lignes
+    ]
+
+
 @app.route("/historique")
 def historique():
     if "utilisateur" not in session:
         return redirect(url_for("login"))
-    return render_template("bientot.html", titre="Historique")
+
+    resultats = historique_utilisateur(session["utilisateur"])
+    return render_template("historique.html", historique=resultats)
 
 @app.route("/admin")
 def admin():
