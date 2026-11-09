@@ -99,9 +99,10 @@ Q: Deuxième question ?
             <p id="resume-quiz"></p>
         </div>
 
-        {# Prévient que les questions viennent du générateur factice #}
+        {# Plan B : prévient que l'IA n'a pas pu être utilisée et que les questions sont des exemples #}
         <p class="bandeau-simulation" id="bandeau-simulation" hidden>
-            <strong>Génération simulée.</strong> Ces questions sont des exemples, en attendant le vrai générateur.
+            <strong>Génération simulée.</strong> L'IA n'a pas pu être utilisée (<span id="raison-simulation"></span>).
+            Ces questions sont des exemples : modifiez-les avant d'enregistrer.
         </p>
 
         <form id="form-enregistrement" novalidate>

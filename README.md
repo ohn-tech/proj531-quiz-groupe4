@@ -55,5 +55,19 @@ Exemples : `data/exemple_quiz.txt` (correct) et `data/exemple_quiz_erreur.txt` (
 3. Lancer l'application : `cd src` puis `python app.py`
 4. La page de connexion s'ouvre dans le navigateur (http://127.0.0.1:5000/login)
 
+## Génération de quiz par IA (Groq)
+1. Créer une clé gratuite sur https://console.groq.com/keys
+2. Donner la clé à l'application, au choix :
+   - variable d'environnement, dans le terminal qui lance l'application (à refaire à chaque nouveau terminal) :
+     PowerShell `$env:GROQ_API_KEY="votre_clé"`, macOS/Linux `export GROQ_API_KEY="votre_clé"` ;
+   - ou fichier `.env` à la racine du projet contenant `GROQ_API_KEY=votre_clé` (ignoré par git).
+
+   Ne jamais mettre la clé dans le code ni la pousser sur GitHub.
+3. Page « Importer » → « Générer à partir d'un document » (TXT ou PDF)
+
+Optionnel : `GROQ_MODEL=...` dans `.env` pour changer de modèle (par défaut `llama-3.3-70b-versatile`).
+
+**Plan B sans internet** : sans clé, sans connexion, ou si l'IA renvoie un quiz invalide, l'application génère des questions d'exemple (génération simulée) et affiche la raison. La page d'import marche donc toujours.
+
 ## Tests
 Depuis la racine du projet : `python -m unittest discover tests`

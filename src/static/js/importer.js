@@ -224,9 +224,14 @@ document.addEventListener("DOMContentLoaded", () => {
     function afficherVerification(quiz) {
         document.getElementById("titre-import").value = quiz.titre;
         const nb = quiz.questions.length;
-        const origine = quiz.simule ? "générées à partir de" : "lues dans";
+        // Quiz lu dans un fichier, généré par l'IA, ou généré en mode simulé (plan B)
+        let origine = "lues dans";
+        if (modeActuel() === "document") {
+            origine = quiz.simule ? "générées à partir de" : "générées par l'IA à partir de";
+        }
         document.getElementById("resume-quiz").textContent =
             `${nb} question${nb > 1 ? "s" : ""} ${origine} « ${fichier.name} ». Corrigez-les si besoin avant d'enregistrer.`;
+        document.getElementById("raison-simulation").textContent = quiz.raison || "raison inconnue";
         document.getElementById("bandeau-simulation").hidden = !quiz.simule;
 
         // Remplace les questions d'un éventuel import précédent
