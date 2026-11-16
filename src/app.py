@@ -12,6 +12,8 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
 # Lecture des quiz importés depuis un fichier texte, et vérification avant enregistrement
 from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX
+# Génération d'un quiz à partir d'un document par l'IA (Groq), avec plan B sans internet
+from generation_ia import generer_quiz
 # Hachage des mots de passe
 from werkzeug.security import generate_password_hash, check_password_hash
 
@@ -99,6 +101,15 @@ def create_table():
             FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
         );    
     """)
+    db.commit()
+
+# Ajoute une liste d'utilisateurs (login, mot de passe), mots de passe hachés.
+# Utilisée par les tests ; plus aucun compte de test n'est créé au démarrage.
+def add_utilisateurs(tab):
+    db = get_db()
+    for (login, mdp) in tab:
+        if db.execute("SELECT 1 FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
+            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, generate_password_hash(mdp)))
     db.commit()
 
 # Initialisation de la base au démarrage
@@ -207,10 +218,11 @@ def creer_utilisateur(login, mdp):
 
 def delete_utilisateur(login):
     db = get_db()
+    # Avec les clés étrangères, il faut d'abord supprimer ce qui appartient à l'utilisateur :
+    # ses quiz (avec leurs questions, réponses, tentatives et documents), puis ses tentatives
     quiz = db.execute("SELECT id_quizz FROM quizz WHERE login_creator = ?", (login,)).fetchall()
 
     for (id_quizz,) in quiz:
-        
         questions = db.execute("SELECT id_question FROM questions WHERE id_quizz = ?", (id_quizz,)).fetchall()
         for (id_question,) in questions:
             db.execute("DELETE FROM answers WHERE id_question = ?", (id_question,))
@@ -222,7 +234,6 @@ def delete_utilisateur(login):
     db.execute("DELETE FROM quizz WHERE login_creator = ?", (login,))
     db.execute("DELETE FROM attempts WHERE login = ?", (login,))
     curseur = db.execute("DELETE FROM utilisateurs WHERE login = ?", (login,))
-
     db.commit()
     return curseur.rowcount > 0
 
@@ -434,21 +445,6 @@ def creer_quizz():
 # Taille maximale d'un document envoyé pour générer un quiz (5 Mo)
 TAILLE_DOCUMENT_MAX = 5_000_000
 
-# Génération factice en attendant le vrai générateur (côté backend) :
-# renvoie des questions d'exemple pour pouvoir tester l'interface d'import.
-# À remplacer par la vraie génération à partir du texte du document.
-def generer_quiz_factice(nom_fichier, nb_questions):
-    titre = os.path.splitext(nom_fichier)[0].strip()[:100] or "Quiz généré"
-    questions = [
-        {
-            "texte": f"Question d'exemple n° {numero} (à remplacer par le vrai générateur)",
-            "choix": ["Bonne réponse", "Mauvaise réponse A", "Mauvaise réponse B", "Mauvaise réponse C"],
-            "reponse": 0,
-        }
-        for numero in range(1, nb_questions + 1)
-    ]
-    return {"titre": titre, "questions": questions}
-
 # Route de la page d'import (générer un quiz à partir d'un document, ou importer un quiz écrit)
 @app.route("/quiz/importer")
 def importer_quiz():
@@ -500,8 +496,10 @@ def analyser_import():
             except UnicodeDecodeError:
                 return jsonify(erreurs=["Le fichier texte doit être encodé en UTF-8."]), 400
 
-        quiz_genere = generer_quiz_factice(fichier.filename, int(nb_questions))
-        return jsonify(titre=quiz_genere["titre"], questions=quiz_genere["questions"], simule=True)
+        # Génération par l'IA ; raison n'est pas None si on est passé au plan B (génération simulée)
+        quiz_genere, raison = generer_quiz(contenu, extension, fichier.filename, int(nb_questions))
+        return jsonify(titre=quiz_genere["titre"], questions=quiz_genere["questions"],
+                       simule=raison is not None, raison=raison)
 
     return jsonify(erreurs=["Choisissez ce que vous voulez faire du fichier."]), 400
 
@@ -584,10 +582,24 @@ def quizz_route(quiz_id):
         score = 0
         date_actuelle = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Calcul du nombre de bonnes réponses
+        # Calcul du nombre de bonnes réponses et préparation de la correction détaillée :
+        # pour chaque question, la réponse donnée par l'utilisateur et la bonne réponse
+        correction = []
         for i, question in enumerate(quizz["questions"]):
-            if request.form.get(f"q{i}") == str(question["reponse"]):
+            choix_donne = request.form.get(f"q{i}")
+            est_juste = choix_donne == str(question["reponse"])
+            if est_juste:
                 score += 1
+            # Réponse donnée : None si la question est restée sans réponse (ou valeur invalide)
+            reponse_donnee = None
+            if choix_donne is not None and choix_donne.isdecimal() and int(choix_donne) < len(question["choix"]):
+                reponse_donnee = question["choix"][int(choix_donne)]
+            correction.append({
+                "texte": question["texte"],
+                "reponse_donnee": reponse_donnee,
+                "bonne_reponse": question["choix"][question["reponse"]],
+                "est_juste": est_juste,
+            })
 
         # Enregistrement uniquement pour un utilisateur connecté
         # et pour un quiz enregistré en base (les quiz factices ont un id entier).
@@ -608,11 +620,8 @@ def quizz_route(quiz_id):
         if request.form.get("temps_ecoule") == "1":
             message = "Temps écoulé ! " + message
 
-        if "utilisateur" not in session:
-            return render_template("quiz.html", quiz=quizz, resultat=message)
-
-        flash(message, "succes")
-        return redirect(url_for("accueil"))
+        # Page de résultat avec la correction détaillée, pour tous les joueurs
+        return render_template("quiz.html", quiz=quizz, resultat=message, correction=correction)
 
     return render_template("quiz.html", quiz=quizz)
 
@@ -638,16 +647,25 @@ def historique_utilisateur(login):
         ORDER BY a.date_attempt DESC
     """, (login,)).fetchall()
 
-    return [
-        {
+    historique = []
+    for ligne in lignes:
+        score = int(ligne["score"])
+        nb_questions = int(ligne["nb_questions"])
+        # Date lisible : "2026-11-16 15:42:10" devient "16/11/2026 à 15:42"
+        try:
+            date_lisible = datetime.strptime(ligne["date"], "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y à %H:%M")
+        except (TypeError, ValueError):
+            date_lisible = ligne["date"]
+        historique.append({
             "id_quizz": int(ligne["id_quizz"]),
             "titre": ligne["titre"],
-            "score": int(ligne["score"]),
-            "nb_questions": int(ligne["nb_questions"]),
-            "date": ligne["date"]
-        }
-        for ligne in lignes
-    ]
+            "score": score,
+            "nb_questions": nb_questions,
+            # Pourcentage de bonnes réponses (0 si le quiz n'a plus de questions)
+            "pourcentage": round(100 * score / nb_questions) if nb_questions else 0,
+            "date": date_lisible,
+        })
+    return historique
 
 
 @app.route("/historique")
@@ -656,7 +674,16 @@ def historique():
         return redirect(url_for("login"))
 
     resultats = historique_utilisateur(session["utilisateur"])
-    return render_template("historique.html", historique=resultats)
+    # Statistiques affichées en haut de la page : nombre de tentatives, moyenne et meilleur résultat
+    statistiques = None
+    if resultats:
+        pourcentages = [tentative["pourcentage"] for tentative in resultats]
+        statistiques = {
+            "nb_tentatives": len(resultats),
+            "moyenne": round(sum(pourcentages) / len(pourcentages)),
+            "meilleur": max(pourcentages),
+        }
+    return render_template("historique.html", historique=resultats, statistiques=statistiques)
 
 # Supprime un quiz : seul son créateur en a le droit (« le créateur est l'administrateur de son quiz »)
 @app.route("/quiz/<quiz_id>/supprimer", methods=["POST"])
