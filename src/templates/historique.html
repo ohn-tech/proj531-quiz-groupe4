@@ -8,27 +8,58 @@
     <h1 class="titre-page">Mon historique</h1>
 
     {% if historique %}
-        <table class="tableau-historique">
-            <thead>
-                <tr>
-                    <th>Quiz</th>
-                    <th>Score</th>
-                    <th>Date</th>
-                </tr>
-            </thead>
-            <tbody>
-                {% for tentative in historique %}
+        {# Statistiques : nombre de quiz passés, moyenne et meilleur résultat (en %) #}
+        <div class="stats-historique">
+            <div class="carte-stat">
+                <p class="valeur-stat">{{ statistiques.nb_tentatives }}</p>
+                <p class="libelle-stat">quiz passé{{ 's' if statistiques.nb_tentatives > 1 }}</p>
+            </div>
+            <div class="carte-stat">
+                <p class="valeur-stat">{{ statistiques.moyenne }} %</p>
+                <p class="libelle-stat">de bonnes réponses en moyenne</p>
+            </div>
+            <div class="carte-stat">
+                <p class="valeur-stat">{{ statistiques.meilleur }} %</p>
+                <p class="libelle-stat">meilleur résultat</p>
+            </div>
+        </div>
+
+        <div class="carte-historique">
+            <table class="tableau-historique">
+                <thead>
                     <tr>
-                        {# Un quiz supprimé n'a plus de titre : on l'indique #}
-                        <td>{{ tentative.titre or "Quiz supprimé" }}</td>
-                        <td>{{ tentative.score }} / {{ tentative.nb_questions }}</td>
-                        <td>{{ tentative.date }}</td>
+                        <th>Quiz</th>
+                        <th>Score</th>
+                        <th>Date</th>
+                        <th></th>
                     </tr>
-                {% endfor %}
-            </tbody>
-        </table>
+                </thead>
+                <tbody>
+                    {% for tentative in historique %}
+                        <tr>
+                            {# Un quiz supprimé n'a plus de titre : on l'indique #}
+                            <td>{{ tentative.titre or "Quiz supprimé" }}</td>
+                            {# Score en vert à partir de 50 % de bonnes réponses, en rouge en dessous #}
+                            <td>
+                                <span class="score-historique {{ 'score-bon' if tentative.pourcentage >= 50 else 'score-faible' }}">
+                                    {{ tentative.score }} / {{ tentative.nb_questions }} ({{ tentative.pourcentage }} %)
+                                </span>
+                            </td>
+                            <td>{{ tentative.date }}</td>
+                            {# Lien pour rejouer, seulement si le quiz existe encore #}
+                            <td>
+                                {% if tentative.titre %}
+                                    <a class="lien-rejouer" href="{{ url_for('quizz_route', quiz_id='custom-' ~ tentative.id_quizz) }}">Rejouer</a>
+                                {% endif %}
+                            </td>
+                        </tr>
+                    {% endfor %}
+                </tbody>
+            </table>
+        </div>
     {% else %}
         <p class="vide">Vous n'avez encore passé aucun quiz.</p>
+        <p class="connexion-creation"><a class="btn-principal" href="{{ url_for('accueil') }}">Voir les quiz disponibles</a></p>
     {% endif %}
 </main>
 {% endblock %}
