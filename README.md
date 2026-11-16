@@ -65,7 +65,7 @@ Exemples : `data/exemple_quiz.txt` (correct) et `data/exemple_quiz_erreur.txt` (
    Ne jamais mettre la clé dans le code ni la pousser sur GitHub.
 3. Page « Importer » → « Générer à partir d'un document » (TXT ou PDF)
 
-Optionnel : `GROQ_MODEL=...` dans `.env` pour changer de modèle (par défaut `llama-3.3-70b-versatile`).
+Optionnel : `GROQ_MODEL=...` dans `.env` pour changer de modèle (par défaut `openai/gpt-oss-120b`, liste des modèles sur https://console.groq.com/docs/models).
 
 **Plan B sans internet** : sans clé, sans connexion, ou si l'IA renvoie un quiz invalide, l'application génère des questions d'exemple (génération simulée) et affiche la raison. La page d'import marche donc toujours.
 

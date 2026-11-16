@@ -19,7 +19,7 @@ except ImportError:
 from import_quiz import verifier_quiz, TAILLE_TITRE_MAX
 
 # Modèle utilisé par défaut (modifiable avec GROQ_MODEL si Groq le retire)
-MODELE_PAR_DEFAUT = "llama-3.3-70b-versatile"
+MODELE_PAR_DEFAUT = "openai/gpt-oss-120b"
 # Nombre maximal de caractères du document envoyés à l'IA (limite de la version gratuite de Groq)
 TEXTE_MAX = 12_000
 # Temps d'attente maximal de la réponse de Groq, en secondes
@@ -101,6 +101,8 @@ def appeler_groq(cle, modele, message):
         raise ErreurGeneration("trop de demandes envoyées à Groq, réessayez dans une minute")
     except groq.APIConnectionError:
         raise ErreurGeneration("Groq est injoignable (pas de connexion internet ?)")
+    except groq.NotFoundError:
+        raise ErreurGeneration(f"le modèle « {modele} » n'existe plus chez Groq, choisissez-en un autre avec GROQ_MODEL")
     except groq.APIStatusError as erreur:
         raise ErreurGeneration(f"Groq a renvoyé une erreur (code {erreur.status_code})")
     except groq.GroqError:
