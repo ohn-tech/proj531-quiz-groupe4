@@ -572,10 +572,24 @@ def quizz_route(quiz_id):
         score = 0
         date_actuelle = datetime.now().strftime("%Y-%m-%d %H:%M:%S")
 
-        # Calcul du nombre de bonnes réponses
+        # Calcul du nombre de bonnes réponses et préparation de la correction détaillée :
+        # pour chaque question, la réponse donnée par l'utilisateur et la bonne réponse
+        correction = []
         for i, question in enumerate(quizz["questions"]):
-            if request.form.get(f"q{i}") == str(question["reponse"]):
+            choix_donne = request.form.get(f"q{i}")
+            est_juste = choix_donne == str(question["reponse"])
+            if est_juste:
                 score += 1
+            # Réponse donnée : None si la question est restée sans réponse (ou valeur invalide)
+            reponse_donnee = None
+            if choix_donne is not None and choix_donne.isdecimal() and int(choix_donne) < len(question["choix"]):
+                reponse_donnee = question["choix"][int(choix_donne)]
+            correction.append({
+                "texte": question["texte"],
+                "reponse_donnee": reponse_donnee,
+                "bonne_reponse": question["choix"][question["reponse"]],
+                "est_juste": est_juste,
+            })
 
         # Enregistrement uniquement pour un utilisateur connecté
         # et pour un quiz enregistré en base (les quiz factices ont un id entier).
@@ -596,11 +610,8 @@ def quizz_route(quiz_id):
         if request.form.get("temps_ecoule") == "1":
             message = "Temps écoulé ! " + message
 
-        if "utilisateur" not in session:
-            return render_template("quiz.html", quiz=quizz, resultat=message)
-
-        flash(message, "succes")
-        return redirect(url_for("accueil"))
+        # Page de résultat avec la correction détaillée, pour tous les joueurs
+        return render_template("quiz.html", quiz=quizz, resultat=message, correction=correction)
 
     return render_template("quiz.html", quiz=quizz)
 
