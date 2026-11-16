@@ -62,11 +62,12 @@
                 <div class="carte-quiz">
                     <h2>{{ quiz.titre }}</h2>
                     <p class="description">{{ quiz.description }}</p>
-                    {# Badge de visibilité : is_public vaut 1 (public) ou 0 (privé), absent pour les quiz factices #}
+                    {# Badge de visibilité : is_public vaut 0 (privé) ou 1 (public) ;
+                       les quiz factices (sans visibilité) sont visibles par tous, donc publics #}
                     {% if quiz.visibilite == 0 %}
-                        <p class="badge-prive">Quiz privé</p>
-                    {% elif quiz.visibilite == 1 %}
-                        <p class="badge-public">Quiz public</p>
+                        <p class="badge-prive">🔒 Quiz privé</p>
+                    {% else %}
+                        <p class="badge-public">🌐 Quiz public</p>
                     {% endif %}
                     {# Nombre de questions (avec un "s" au pluriel) et durée du quiz #}
                     {# Quiz de la base : nb_questions ; quiz factices : longueur de la liste questions #}
