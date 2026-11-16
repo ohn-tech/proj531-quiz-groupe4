@@ -12,11 +12,13 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
 # Lecture des quiz importés depuis un fichier texte, et vérification avant enregistrement
 from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX
+# Hachage des mots de passe
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Crée l'application Flask
 app = Flask(__name__)
 # Clé secrète utilisée pour signer la session (à changer en production)
-app.secret_key = "change-moi"
+app.secret_key = secrets.token_hex(32)
 
 # Module de base de données SQLite
 import sqlite3
@@ -62,7 +64,8 @@ def create_table():
             date_quizz TEXT,
             category TEXT,
             difficulty TEXT,
-            login_creator TEXT NOT NULL
+            login_creator TEXT NOT NULL,
+            FOREIGN KEY (login_creator) REFERENCES utilisateurs(login)
         );
         CREATE TABLE IF NOT EXISTS questions (
             id_question INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -83,24 +86,27 @@ def create_table():
             score INTEGER NOT NULL DEFAULT 0,
             date_attempt TEXT NOT NULL,
             login TEXT NOT NULL,
-            id_quizz INTEGER NOT NULL
+            id_quizz INTEGER NOT NULL,
+            FOREIGN KEY (login) REFERENCES utilisateurs(login),
+            FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
         );
         CREATE TABLE IF NOT EXISTS folder (
             id_folder INTEGER PRIMARY KEY AUTOINCREMENT,
             name_folder TEXT NOT NULL,
             format TEXT,
             date_folder TEXT,
-            id_quizz INTEGER NOT NULL
+            id_quizz INTEGER NOT NULL,
+            FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
         );    
     """)
     db.commit()
 
 # Ajoute des utilisateurs de test si la table est vide
-def add_utilisateurs(tab = [("maram", "1234"), ("admin", "admin")]):
+def add_utilisateurs(tab):
     db = get_db()
     for (login, mdp) in tab:
         if db.execute("SELECT 1 FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
-            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
+            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, generate_password_hash(mdp)))
     db.commit()
 
 # Initialisation de la base au démarrage
@@ -198,12 +204,12 @@ def trouver_quizz(id_quizz):
 def verifier_identifiants(login, mdp):
     db = get_db()
     ligne = db.execute("SELECT password FROM utilisateurs WHERE login = ?", (login,)).fetchone()
-    return ligne is not None and ligne["password"] == mdp
+    return ligne is not None and check_password_hash(ligne["password"], mdp)
 
 def creer_utilisateur(login, mdp):
     db = get_db()
     if db.execute("SELECT * FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
-        db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
+        db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, generate_password_hash(mdp)))
         db.commit()
         return True
     return False
