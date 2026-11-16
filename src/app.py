@@ -284,7 +284,9 @@ def accueil():
         (utilisateur,),
     ).fetchall()
 
-    liste_quiz = FAUX_QUIZ + [
+    # Seuls les quiz de la base sont affichés : les quiz d'exemple (FAUX_QUIZ) ne sont pas enregistrés
+    # dans la base, donc leurs résultats ne pourraient pas apparaître dans l'historique
+    liste_quiz = [
         {
             "id": f"custom-{q['id_quizz']}",
             "titre": q["title"],
