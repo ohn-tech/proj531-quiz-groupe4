@@ -12,6 +12,8 @@ from datetime import datetime
 from flask import Flask, render_template, request, redirect, url_for, session, flash, abort, jsonify
 # Lecture des quiz importés depuis un fichier texte, et vérification avant enregistrement
 from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX
+# Génération d'un quiz à partir d'un document par l'IA (Groq), avec plan B sans internet
+from generation_ia import generer_quiz
 
 # Crée l'application Flask
 app = Flask(__name__)
@@ -422,21 +424,6 @@ def creer_quizz():
 # Taille maximale d'un document envoyé pour générer un quiz (5 Mo)
 TAILLE_DOCUMENT_MAX = 5_000_000
 
-# Génération factice en attendant le vrai générateur (côté backend) :
-# renvoie des questions d'exemple pour pouvoir tester l'interface d'import.
-# À remplacer par la vraie génération à partir du texte du document.
-def generer_quiz_factice(nom_fichier, nb_questions):
-    titre = os.path.splitext(nom_fichier)[0].strip()[:100] or "Quiz généré"
-    questions = [
-        {
-            "texte": f"Question d'exemple n° {numero} (à remplacer par le vrai générateur)",
-            "choix": ["Bonne réponse", "Mauvaise réponse A", "Mauvaise réponse B", "Mauvaise réponse C"],
-            "reponse": 0,
-        }
-        for numero in range(1, nb_questions + 1)
-    ]
-    return {"titre": titre, "questions": questions}
-
 # Route de la page d'import (générer un quiz à partir d'un document, ou importer un quiz écrit)
 @app.route("/quiz/importer")
 def importer_quiz():
@@ -488,8 +475,10 @@ def analyser_import():
             except UnicodeDecodeError:
                 return jsonify(erreurs=["Le fichier texte doit être encodé en UTF-8."]), 400
 
-        quiz_genere = generer_quiz_factice(fichier.filename, int(nb_questions))
-        return jsonify(titre=quiz_genere["titre"], questions=quiz_genere["questions"], simule=True)
+        # Génération par l'IA ; raison n'est pas None si on est passé au plan B (génération simulée)
+        quiz_genere, raison = generer_quiz(contenu, extension, fichier.filename, int(nb_questions))
+        return jsonify(titre=quiz_genere["titre"], questions=quiz_genere["questions"],
+                       simule=raison is not None, raison=raison)
 
     return jsonify(erreurs=["Choisissez ce que vous voulez faire du fichier."]), 400
 
