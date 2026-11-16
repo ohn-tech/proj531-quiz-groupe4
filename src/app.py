@@ -14,11 +14,13 @@ from flask import Flask, render_template, request, redirect, url_for, session, f
 from import_quiz import lire_fichier, verifier_quiz, TAILLE_FICHIER_MAX
 # Génération d'un quiz à partir d'un document par l'IA (Groq), avec plan B sans internet
 from generation_ia import generer_quiz
+# Hachage des mots de passe
+from werkzeug.security import generate_password_hash, check_password_hash
 
 # Crée l'application Flask
 app = Flask(__name__)
 # Clé secrète utilisée pour signer la session (à changer en production)
-app.secret_key = "change-moi"
+app.secret_key = os.environ.get("SECRET_KEY") or secrets.token_hex(32)
 
 # Module de base de données SQLite
 import sqlite3
@@ -64,7 +66,8 @@ def create_table():
             date_quizz TEXT,
             category TEXT,
             difficulty TEXT,
-            login_creator TEXT NOT NULL
+            login_creator TEXT NOT NULL,
+            FOREIGN KEY (login_creator) REFERENCES utilisateurs(login)
         );
         CREATE TABLE IF NOT EXISTS questions (
             id_question INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -85,30 +88,33 @@ def create_table():
             score INTEGER NOT NULL DEFAULT 0,
             date_attempt TEXT NOT NULL,
             login TEXT NOT NULL,
-            id_quizz INTEGER NOT NULL
+            id_quizz INTEGER NOT NULL,
+            FOREIGN KEY (login) REFERENCES utilisateurs(login),
+            FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
         );
         CREATE TABLE IF NOT EXISTS folder (
             id_folder INTEGER PRIMARY KEY AUTOINCREMENT,
             name_folder TEXT NOT NULL,
             format TEXT,
             date_folder TEXT,
-            id_quizz INTEGER NOT NULL
+            id_quizz INTEGER NOT NULL,
+            FOREIGN KEY (id_quizz) REFERENCES quizz(id_quizz)
         );    
     """)
     db.commit()
 
-# Ajoute des utilisateurs de test si la table est vide
-def add_utilisateurs(tab = [("maram", "1234"), ("admin", "admin")]):
+# Ajoute une liste d'utilisateurs (login, mot de passe), mots de passe hachés.
+# Utilisée par les tests ; plus aucun compte de test n'est créé au démarrage.
+def add_utilisateurs(tab):
     db = get_db()
     for (login, mdp) in tab:
         if db.execute("SELECT 1 FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
-            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
+            db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, generate_password_hash(mdp)))
     db.commit()
 
 # Initialisation de la base au démarrage
 with app.app_context():
     create_table()
-    add_utilisateurs()
 
 # Quiz factices en mémoire (pour les tests rapides)
 FAUX_QUIZ = [
@@ -200,18 +206,33 @@ def trouver_quizz(id_quizz):
 def verifier_identifiants(login, mdp):
     db = get_db()
     ligne = db.execute("SELECT password FROM utilisateurs WHERE login = ?", (login,)).fetchone()
-    return ligne is not None and ligne["password"] == mdp
+    return ligne is not None and check_password_hash(ligne["password"], mdp)
 
 def creer_utilisateur(login, mdp):
     db = get_db()
     if db.execute("SELECT * FROM utilisateurs WHERE login = ?", (login,)).fetchone() is None:
-        db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, mdp))
+        db.execute("INSERT INTO utilisateurs (login, password) VALUES (?, ?)", (login, generate_password_hash(mdp)))
         db.commit()
         return True
     return False
 
 def delete_utilisateur(login):
     db = get_db()
+    # Avec les clés étrangères, il faut d'abord supprimer ce qui appartient à l'utilisateur :
+    # ses quiz (avec leurs questions, réponses, tentatives et documents), puis ses tentatives
+    quiz = db.execute("SELECT id_quizz FROM quizz WHERE login_creator = ?", (login,)).fetchall()
+
+    for (id_quizz,) in quiz:
+        questions = db.execute("SELECT id_question FROM questions WHERE id_quizz = ?", (id_quizz,)).fetchall()
+        for (id_question,) in questions:
+            db.execute("DELETE FROM answers WHERE id_question = ?", (id_question,))
+
+        db.execute("DELETE FROM questions WHERE id_quizz = ?", (id_quizz,))
+        db.execute("DELETE FROM folder WHERE id_quizz = ?", (id_quizz,))
+        db.execute("DELETE FROM attempts WHERE id_quizz = ?", (id_quizz,))
+
+    db.execute("DELETE FROM quizz WHERE login_creator = ?", (login,))
+    db.execute("DELETE FROM attempts WHERE login = ?", (login,))
     curseur = db.execute("DELETE FROM utilisateurs WHERE login = ?", (login,))
     db.commit()
     return curseur.rowcount > 0
