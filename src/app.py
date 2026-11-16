@@ -61,7 +61,7 @@ def create_table():
             description TEXT,
             timer INTEGER NOT NULL DEFAULT 120,
             is_public INTEGER NOT NULL DEFAULT 0,
-            code TEXT,
+            code TEXT UNIQUE,
             origin TEXT,
             date_quizz TEXT,
             category TEXT,
