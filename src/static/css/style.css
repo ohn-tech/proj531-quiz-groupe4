@@ -1474,3 +1474,70 @@ body.page-large .succes {
 .correction-fausse .correction-badge {
     color: var(--erreur);
 }
+
+/* ---------- Page historique ---------- */
+.stats-historique {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+    gap: 12px;
+    margin-bottom: 16px;
+}
+.carte-stat {
+    padding: 16px;
+    border-radius: var(--rayon);
+    background: #ffffff;
+    text-align: center;
+}
+.valeur-stat {
+    margin: 0;
+    font-size: 1.6rem;
+    font-weight: 700;
+    color: var(--primaire);
+}
+.libelle-stat {
+    margin: 4px 0 0;
+    color: var(--texte-doux);
+    font-size: 0.9rem;
+}
+.carte-historique {
+    padding: 8px 16px;
+    border-radius: var(--rayon);
+    background: #ffffff;
+    overflow-x: auto;
+}
+.tableau-historique {
+    width: 100%;
+    border-collapse: collapse;
+}
+.tableau-historique th,
+.tableau-historique td {
+    padding: 10px 8px;
+    text-align: left;
+    border-bottom: 1px solid var(--bordure);
+}
+.tableau-historique th {
+    color: var(--texte-doux);
+    font-size: 0.85rem;
+    font-weight: 600;
+}
+.tableau-historique tr:last-child td {
+    border-bottom: none;
+}
+.score-historique {
+    font-weight: 600;
+}
+.score-bon {
+    color: #16a34a;
+}
+.score-faible {
+    color: var(--erreur);
+}
+.lien-rejouer {
+    color: var(--primaire);
+    font-weight: 600;
+    text-decoration: none;
+}
+.lien-rejouer:hover {
+    text-decoration: underline;
+}
+
