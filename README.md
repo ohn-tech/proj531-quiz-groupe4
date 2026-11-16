@@ -2,7 +2,7 @@
 
 Plateforme web en Python (Flask) où chaque utilisateur peut créer ses propres quiz et jouer à ceux des autres.
 
-## Fonctionnalités prévues
+## Fonctionnalités
 - Création de compte et connexion (mots de passe hachés)
 - Chaque utilisateur peut créer ses quiz et jouer à ceux des autres
 - Trois façons de créer un quiz :
@@ -12,8 +12,10 @@ Plateforme web en Python (Flask) où chaque utilisateur peut créer ses propres 
 - Chaque quiz a un thème et une difficulté (facile, moyen, difficile)
 - Le créateur d'un quiz en est l'administrateur : lui seul peut le supprimer
 - Quiz publics (visibles par tous) ou privés (accessibles avec un code de 6 caractères fourni par le créateur)
-- Affichage du score final et des bonnes réponses
-- Historique des scores de chaque utilisateur
+- Minuteur pendant le quiz
+- Score final et correction détaillée : pour chaque question, la réponse donnée et la bonne réponse
+- Historique des scores de chaque utilisateur, avec statistiques (quiz passés, moyenne, meilleur résultat) et lien pour rejouer
+- Suppression de compte : le compte est supprimé avec ses quiz et ses tentatives
 
 ## Règles des quiz
 - 1 à 20 questions par quiz
@@ -54,6 +56,11 @@ Exemples : `data/exemple_quiz.txt` (correct) et `data/exemple_quiz_erreur.txt` (
 2. Installer les dépendances : `pip install -r requirements.txt`
 3. Lancer l'application : `cd src` puis `python app.py`
 4. La page de connexion s'ouvre dans le navigateur (http://127.0.0.1:5000/login)
+5. Créer un compte avec « Inscription » : aucun compte n'existe au départ
+
+Remarques :
+- La base de données `src/quizzapp.db` est créée automatiquement au premier lancement. Après une mise à jour du code, la supprimer pour repartir d'une base propre.
+- Optionnel : définir la variable d'environnement `SECRET_KEY` avant de lancer l'application (PowerShell : `$env:SECRET_KEY="une-phrase-secrete"`). Sans elle, une clé aléatoire est générée à chaque démarrage et il faut se reconnecter.
 
 ## Génération de quiz par IA (Groq)
 1. Créer une clé gratuite sur https://console.groq.com/keys
@@ -69,5 +76,12 @@ Optionnel : `GROQ_MODEL=...` dans `.env` pour changer de modèle (par défaut `o
 
 **Plan B sans internet** : sans clé, sans connexion, ou si l'IA renvoie un quiz invalide, l'application génère des questions d'exemple (génération simulée) et affiche la raison. La page d'import marche donc toujours.
 
+## Sécurité
+- Mots de passe hachés (werkzeug, `generate_password_hash` / `check_password_hash`)
+- Clé secrète de session lue dans une variable d'environnement, jamais dans le code
+- Requêtes SQL paramétrées et clés étrangères activées
+- Seul le créateur d'un quiz peut le supprimer, même en tapant l'adresse directement
+- Clé API Groq dans une variable d'environnement ou un fichier `.env` ignoré par git
+
 ## Tests
-Depuis la racine du projet : `python -m unittest discover tests`
+Depuis la racine du projet, après `pip install -r requirements.txt` : `python -m unittest discover tests`
