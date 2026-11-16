@@ -1435,3 +1435,42 @@ body.page-large .succes {
     background: #c0392b;
     color: #ffffff;
 }
+
+/* ---------- Correction détaillée (page de résultat d'un quiz) ---------- */
+.titre-correction {
+    margin: 24px 0 12px;
+    font-size: 1.2rem;
+    color: #ffffff;
+}
+.carte-correction:last-of-type {
+    margin-bottom: 20px;
+}
+.carte-correction {
+    margin-bottom: 12px;
+    padding: 14px 16px;
+    border: 1.5px solid var(--bordure);
+    border-left-width: 5px;
+    border-radius: var(--rayon);
+    background: #ffffff;
+}
+.carte-correction p {
+    margin: 4px 0;
+}
+.correction-titre {
+    display: flex;
+    justify-content: space-between;
+    font-weight: 600;
+    color: var(--texte-doux);
+}
+.correction-juste {
+    border-left-color: #16a34a;
+}
+.correction-juste .correction-badge {
+    color: #16a34a;
+}
+.correction-fausse {
+    border-left-color: var(--erreur);
+}
+.correction-fausse .correction-badge {
+    color: var(--erreur);
+}

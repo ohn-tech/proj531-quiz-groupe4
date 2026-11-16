@@ -8,17 +8,39 @@
     {# Titre du quiz et minuteur (la durée est lue par quiz.js) #}
     <div class="quiz-entete">
         <h1 class="titre-page">{{ quiz.titre }}</h1>
-        <div class="minuteur" id="minuteur" data-duree="{{ quiz.duree }}">
-            <span class="minuteur-icone">⏱</span>
-            <span id="minuteur-temps">--:--</span>
-        </div>
+        {# Le minuteur n'est affiché que pendant le quiz, pas sur la page de résultat #}
+        {% if not resultat %}
+            <div class="minuteur" id="minuteur" data-duree="{{ quiz.duree }}">
+                <span class="minuteur-icone">⏱</span>
+                <span id="minuteur-temps">--:--</span>
+            </div>
+        {% endif %}
     </div>
     {# Barre qui se vide au fil du temps #}
-    <div class="barre-temps"><div class="barre-temps-remplie" id="barre-temps"></div></div>
+    {% if not resultat %}
+        <div class="barre-temps"><div class="barre-temps-remplie" id="barre-temps"></div></div>
+    {% endif %}
 
     {# Quiz terminé par un visiteur non connecté : on affiche le score sur la page #}
     {% if resultat %}
         <p class="succes">{{ resultat }}</p>
+        {# Correction détaillée : pour chaque question, la réponse donnée et la bonne réponse #}
+        {% if correction %}
+            <h2 class="titre-correction">Correction</h2>
+            {% for item in correction %}
+                <div class="carte-correction {{ 'correction-juste' if item.est_juste else 'correction-fausse' }}">
+                    <p class="correction-titre">
+                        Question {{ loop.index }} / {{ correction | length }}
+                        <span class="correction-badge">{{ "✔ Juste" if item.est_juste else "✘ Faux" }}</span>
+                    </p>
+                    <p class="question-texte">{{ item.texte }}</p>
+                    <p>Votre réponse : <strong>{{ item.reponse_donnee if item.reponse_donnee is not none else "pas de réponse" }}</strong></p>
+                    {% if not item.est_juste %}
+                        <p>Bonne réponse : <strong>{{ item.bonne_reponse }}</strong></p>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        {% endif %}
         <a href="{{ url_for('accueil') if session.utilisateur else url_for('login') }}" class="btn-principal">
             {{ "Retour à l'accueil" if session.utilisateur else "Retour à la connexion" }}
         </a>
