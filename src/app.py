@@ -637,16 +637,25 @@ def historique_utilisateur(login):
         ORDER BY a.date_attempt DESC
     """, (login,)).fetchall()
 
-    return [
-        {
+    historique = []
+    for ligne in lignes:
+        score = int(ligne["score"])
+        nb_questions = int(ligne["nb_questions"])
+        # Date lisible : "2026-11-16 15:42:10" devient "16/11/2026 à 15:42"
+        try:
+            date_lisible = datetime.strptime(ligne["date"], "%Y-%m-%d %H:%M:%S").strftime("%d/%m/%Y à %H:%M")
+        except (TypeError, ValueError):
+            date_lisible = ligne["date"]
+        historique.append({
             "id_quizz": int(ligne["id_quizz"]),
             "titre": ligne["titre"],
-            "score": int(ligne["score"]),
-            "nb_questions": int(ligne["nb_questions"]),
-            "date": ligne["date"]
-        }
-        for ligne in lignes
-    ]
+            "score": score,
+            "nb_questions": nb_questions,
+            # Pourcentage de bonnes réponses (0 si le quiz n'a plus de questions)
+            "pourcentage": round(100 * score / nb_questions) if nb_questions else 0,
+            "date": date_lisible,
+        })
+    return historique
 
 
 @app.route("/historique")
@@ -655,7 +664,16 @@ def historique():
         return redirect(url_for("login"))
 
     resultats = historique_utilisateur(session["utilisateur"])
-    return render_template("historique.html", historique=resultats)
+    # Statistiques affichées en haut de la page : nombre de tentatives, moyenne et meilleur résultat
+    statistiques = None
+    if resultats:
+        pourcentages = [tentative["pourcentage"] for tentative in resultats]
+        statistiques = {
+            "nb_tentatives": len(resultats),
+            "moyenne": round(sum(pourcentages) / len(pourcentages)),
+            "meilleur": max(pourcentages),
+        }
+    return render_template("historique.html", historique=resultats, statistiques=statistiques)
 
 # Supprime un quiz : seul son créateur en a le droit (« le créateur est l'administrateur de son quiz »)
 @app.route("/quiz/<quiz_id>/supprimer", methods=["POST"])
