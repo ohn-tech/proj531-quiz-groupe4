@@ -359,11 +359,127 @@ body.page-large {
     text-align: left;
 }
 
+/* ---------- Accueil : en-tête et actions principales ---------- */
+.accueil-entete {
+    margin-bottom: 1.75rem;
+}
+
+.accueil-entete .titre-page {
+    margin: 0 0 0.4rem;
+    font-size: 2rem;
+}
+
+.accueil-intro {
+    margin: 0;
+    font-size: 1.05rem;
+    color: rgba(255, 255, 255, 0.85);
+}
+
+/* Tuiles d'action (Générer avec l'IA, Créer, Rejoindre) */
+.actions-rapides {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(240px, 1fr));
+    gap: 1rem;
+    margin-bottom: 2.75rem;
+}
+
+.action-rapide {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    padding: 1.1rem 1.25rem;
+    color: #ffffff;
+    background: rgba(255, 255, 255, 0.14);
+    border: 1px solid rgba(255, 255, 255, 0.25);
+    border-radius: var(--rayon);
+    transition: background 0.2s, transform 0.2s, box-shadow 0.2s;
+}
+
+.action-rapide:hover {
+    text-decoration: none;
+    background: rgba(255, 255, 255, 0.22);
+    transform: translateY(-3px);
+}
+
+/* Tuile principale, en blanc pour attirer l'œil */
+.action-rapide.mise-en-avant {
+    color: var(--texte);
+    background: #ffffff;
+    border-color: #ffffff;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+}
+
+.action-rapide.mise-en-avant:hover {
+    background: #ffffff;
+    box-shadow: 0 16px 32px rgba(0, 0, 0, 0.18);
+}
+
+.action-icone {
+    flex: 0 0 auto;
+    display: grid;
+    place-items: center;
+    width: 2.75rem;
+    height: 2.75rem;
+    background: rgba(255, 255, 255, 0.2);
+    border-radius: 10px;
+}
+
+.mise-en-avant .action-icone {
+    color: #ffffff;
+    background: var(--primaire);
+}
+
+.action-icone svg {
+    width: 1.4rem;
+    height: 1.4rem;
+}
+
+.action-titre {
+    display: block;
+    font-weight: 600;
+}
+
+.action-texte {
+    display: block;
+    font-size: 0.85rem;
+    font-weight: 400;
+    opacity: 0.85;
+}
+
+.mise-en-avant .action-texte {
+    color: var(--texte-doux);
+    opacity: 1;
+}
+
+/* Titre « Quiz disponibles » et nombre de quiz */
+.section-entete {
+    display: flex;
+    align-items: baseline;
+    justify-content: space-between;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.section-entete h2 {
+    margin: 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+    color: #ffffff;
+}
+
+.compteur {
+    font-size: 0.9rem;
+    color: rgba(255, 255, 255, 0.8);
+}
+
 /* ---------- Grille des quiz ---------- */
 .grille-quiz {
     display: grid;
     grid-template-columns: repeat(auto-fill, minmax(260px, 1fr));
     gap: 1.5rem;
+    /* Chaque carte garde sa hauteur : une carte haute (quiz privé avec code de partage)
+       n'étire pas toute la rangée */
+    align-items: start;
 }
 
 .carte-quiz {
@@ -499,28 +615,15 @@ body.page-large {
     background: var(--primaire-fonce);
 }
 
-/* Message « Aucun quiz disponible » */
+/* Message « Aucun quiz disponible » : encadré clair sur le fond violet */
 .vide {
+    margin: 0;
+    padding: 2rem 1rem;
     color: #ffffff;
     text-align: center;
-}
-
-/* Liens « Rejoindre un quiz privé » et « Importer un quiz » sous la grille */
-.rejoindre-lien {
-    margin: 1.5rem 0;
-    text-align: right;
-}
-
-/* Liens posés sur le fond violet : en blanc pour rester lisibles */
-.rejoindre-lien a {
-    color: #ffffff;
-    text-decoration: underline;
-}
-
-/* Bouton « Connectez-vous pour créer un quiz » (visiteur non connecté) */
-.connexion-creation {
-    margin-top: 1.5rem;
-    text-align: center;
+    background: rgba(255, 255, 255, 0.1);
+    border: 1.5px dashed rgba(255, 255, 255, 0.4);
+    border-radius: var(--rayon);
 }
 
 /* ---------- Formulaire « Créer un quiz » (accueil) ---------- */
