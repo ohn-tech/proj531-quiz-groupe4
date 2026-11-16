@@ -36,7 +36,7 @@ Plateforme web en Python (Flask) où chaque utilisateur peut créer ses propres 
 
 ## Arborescence
 - `src/` : code source (application Flask)
-- `data/` : fichiers d'exemple pour l'import de quiz
+- `data/` : fichiers d'exemple pour l'import de quiz et la génération par IA
 - `tests/` : tests automatiques
 - `docs/` : MCD et document d'architecture
 - `docs/comptes-rendus/` : comptes-rendus de séance, planning des sprints, WBS, PBS, Gantt, PERT, grand bilan
@@ -64,6 +64,8 @@ Exemples : `data/exemple_quiz.txt` (correct) et `data/exemple_quiz_erreur.txt` (
 
    Ne jamais mettre la clé dans le code ni la pousser sur GitHub.
 3. Page « Importer » → « Générer à partir d'un document » (TXT ou PDF)
+
+Documents de cours pour tester : `data/exemple_cours.txt` et `data/exemple_cours.pdf` (le système solaire).
 
 Optionnel : `GROQ_MODEL=...` dans `.env` pour changer de modèle (par défaut `openai/gpt-oss-120b`, liste des modèles sur https://console.groq.com/docs/models).
 
