@@ -627,28 +627,81 @@ body.page-large {
 }
 
 /* ---------- Formulaire « Créer un quiz » (accueil) ---------- */
-/* Bloc repliable : on clique sur « Créer un quiz » pour l'ouvrir */
+/* Fenêtre (popup) ouverte par la tuile « Créer un quiz » */
 .creation-quiz {
-    margin-top: 2rem;
-    padding: 1.5rem;
+    width: min(720px, calc(100% - 2rem));
+    max-height: calc(100vh - 3rem);
+    padding: 0;
+    overflow-y: auto;
+    color: var(--texte);
     background: #ffffff;
+    border: none;
     border-radius: var(--rayon);
-    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.12);
+    box-shadow: 0 24px 48px rgba(0, 0, 0, 0.25);
 }
 
-.creation-quiz > summary {
-    color: var(--primaire-fonce);
-    font-size: 1.1rem;
+.creation-quiz[open] {
+    animation: apparition 0.25s ease-out;
+}
+
+/* Fond assombri derrière la fenêtre */
+.creation-quiz::backdrop {
+    background: rgba(17, 24, 39, 0.55);
+    backdrop-filter: blur(3px);
+}
+
+/* Titre et bouton × restent visibles quand on fait défiler le formulaire */
+.creation-entete {
+    position: sticky;
+    top: 0;
+    z-index: 1;
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.1rem 1.5rem;
+    background: #ffffff;
+    border-bottom: 1px solid var(--bordure);
+}
+
+.creation-entete h2 {
+    margin: 0;
+    font-size: 1.25rem;
     font-weight: 600;
-    cursor: pointer;
+    color: var(--primaire-fonce);
 }
 
-.creation-quiz[open] > summary {
-    margin-bottom: 1.25rem;
+.fermer-creation {
+    width: 2.25rem;
+    height: 2.25rem;
+    margin: 0;
+    padding: 0;
+    font-size: 1.5rem;
+    line-height: 1;
+    color: var(--texte-doux);
+    background: transparent;
+    border-radius: 50%;
+}
+
+.fermer-creation:hover {
+    color: var(--texte);
+    background: #f3f4f6;
 }
 
 .creation-quiz form {
     gap: 0.25rem;
+    padding: 1.25rem 1.5rem 1.5rem;
+}
+
+/* La tuile « Créer un quiz » est un bouton : on retire le style des boutons par défaut */
+button.action-rapide {
+    width: 100%;
+    margin: 0;
+    font-size: 1rem;
+    text-align: left;
+}
+
+button.action-rapide:active {
+    transform: translateY(-3px);
 }
 
 /* Une question du formulaire de création */
