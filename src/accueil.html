@@ -1,0 +1,231 @@
+{# Page d'accueil : liste des quiz disponibles et formulaire de création #}
+{% extends "base.html" %}
+{% block titre %}Accueil{% endblock %}
+{% block classe_body %}page-large{% endblock %}
+
+{% block contenu %}
+<main class="conteneur">
+    {# En-tête : salue l'utilisateur s'il est connecté #}
+    <section class="accueil-entete">
+        <h1 class="titre-page">{% if utilisateur %}Bonjour {{ utilisateur }} 👋{% else %}Bienvenue sur QuizApp{% endif %}</h1>
+        <p class="accueil-intro">Joue à un quiz, crée le tien ou génère-le à partir d'un cours grâce à l'IA.</p>
+    </section>
+
+    {# Actions principales, regroupées en tuiles en haut de la page #}
+    <nav class="actions-rapides" aria-label="Actions principales">
+        {% if utilisateur %}
+            <a class="action-rapide mise-en-avant" href="{{ url_for('importer_quiz') }}">
+                <span class="action-icone" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 3l1.9 5.1L19 10l-5.1 1.9L12 17l-1.9-5.1L5 10l5.1-1.9z"/><path d="M19 15l.9 2.1L22 18l-2.1.9L19 21l-.9-2.1L16 18l2.1-.9z"/></svg>
+                </span>
+                <span><span class="action-titre">Générer avec l'IA</span><span class="action-texte">À partir d'un cours en PDF ou TXT</span></span>
+            </a>
+            {# Ouvre le formulaire de création dans une fenêtre par-dessus la page #}
+            <button type="button" class="action-rapide" id="ouvrir-creation" aria-haspopup="dialog">
+                <span class="action-icone" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"/><path d="M16.5 3.5a2.1 2.1 0 0 1 3 3L7 19l-4 1 1-4z"/></svg>
+                </span>
+                <span><span class="action-titre">Créer un quiz</span><span class="action-texte">Écris tes propres questions</span></span>
+            </button>
+        {% else %}
+            <a class="action-rapide mise-en-avant" href="{{ url_for('login') }}">
+                <span class="action-icone" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M15 3h4a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2h-4"/><path d="M10 17l5-5-5-5"/><path d="M15 12H3"/></svg>
+                </span>
+                <span><span class="action-titre">Se connecter</span><span class="action-texte">Pour créer et générer des quiz</span></span>
+            </a>
+            <a class="action-rapide" href="{{ url_for('inscription') }}">
+                <span class="action-icone" aria-hidden="true">
+                    <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M16 21v-2a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v2"/><circle cx="9" cy="7" r="4"/><path d="M19 8v6"/><path d="M22 11h-6"/></svg>
+                </span>
+                <span><span class="action-titre">Créer un compte</span><span class="action-texte">C'est gratuit et rapide</span></span>
+            </a>
+        {% endif %}
+        <a class="action-rapide" href="{{ url_for('rejoindre_quiz') }}">
+            <span class="action-icone" aria-hidden="true">
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect x="3" y="11" width="18" height="11" rx="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
+            </span>
+            <span><span class="action-titre">Rejoindre un quiz privé</span><span class="action-texte">Avec un code de partage</span></span>
+        </a>
+    </nav>
+
+    {# Titre de la liste, avec le nombre de quiz #}
+    <div class="section-entete">
+        <h2>Quiz disponibles</h2>
+        <span class="compteur">{{ liste_quiz | length }} quiz</span>
+    </div>
+
+    {# Grille des quiz : une carte par quiz #}
+    {% if liste_quiz %}
+        <div class="grille-quiz">
+            {% for quiz in liste_quiz %}
+                <div class="carte-quiz">
+                    <h2>{{ quiz.titre }}</h2>
+                    <p class="description">{{ quiz.description }}</p>
+                    {# Badge de visibilité : is_public vaut 0 (privé) ou 1 (public) ;
+                       les quiz factices (sans visibilité) sont visibles par tous, donc publics #}
+                    {% if quiz.visibilite == 0 %}
+                        <p class="badge-prive">🔒 Quiz privé</p>
+                    {% else %}
+                        <p class="badge-public">🌐 Quiz public</p>
+                    {% endif %}
+                    {# Nombre de questions (avec un "s" au pluriel) et durée du quiz #}
+                    {# Quiz de la base : nb_questions ; quiz factices : longueur de la liste questions #}
+                    {% set nb = quiz.nb_questions if quiz.nb_questions is defined else quiz.questions | length %}
+                    <p class="nb-questions">{{ nb }} question{{ 's' if nb > 1 }} · ⏱ {{ quiz.duree }} s</p>
+                    {# Sujet, difficulté et créateur : absents pour les quiz factices, sujet et difficulté vides pour les quiz importés #}
+                    {% if quiz.sujet or quiz.difficulte or quiz.createur %}
+                        <p class="infos-quiz">
+                            {% if quiz.sujet %}<span class="sujet-quiz">{{ quiz.sujet }}</span>{% endif %}
+                            {% if quiz.difficulte %}<span class="difficulte difficulte-{{ quiz.difficulte | lower }}">{{ quiz.difficulte }}</span>{% endif %}
+                            {% if quiz.createur %}<span class="createur-quiz">par {{ 'vous' if quiz.createur == utilisateur else quiz.createur }}</span>{% endif %}
+                        </p>
+                    {% endif %}
+                    <a href="{{ url_for('quizz_route', quiz_id=quiz.id) }}" class="btn-principal">Commencer</a>
+                                        {# Bouton « Supprimer », visible seulement par le créateur du quiz (droits du créateur) #}
+                    {% if quiz.est_createur %}
+                        {# Formulaire POST : la suppression ne peut pas se faire en tapant une simple adresse #}
+                        <form method="POST" action="{{ url_for('supprimer_quizz', quiz_id=quiz.id) }}"
+                              onsubmit="return confirm('Supprimer ce quiz ? Cette action est définitive.');">
+                            <button type="submit" class="btn-supprimer">Supprimer</button>
+                        </form>
+                    {% endif %}
+                    {# Code et lien de partage, visibles seulement par le créateur du quiz #}
+                    {% if quiz.code_partage %}
+                        <div class="infos-partage">
+                            <p>Code de partage : <strong>{{ quiz.code_partage }}</strong></p>
+                            {# Un clic sélectionne tout le lien pour le copier facilement #}
+                            <label>Lien privé
+                                <input type="text" value="{{ quiz.lien_partage }}" readonly onclick="this.select()">
+                            </label>
+                        </div>
+                    {% endif %}
+                </div>
+            {% endfor %}
+        </div>
+    {% else %}
+        <p class="vide">Aucun quiz disponible pour le moment. Crée le premier !</p>
+    {% endif %}
+
+    {# Formulaire de création dans une fenêtre (popup), réservé aux utilisateurs connectés (géré par create-quiz.js) #}
+    {% if utilisateur %}
+        <dialog class="creation-quiz" id="creation-quiz" aria-labelledby="titre-creation">
+            <div class="creation-entete">
+                <h2 id="titre-creation">Créer un quiz</h2>
+                <button type="button" class="fermer-creation" id="fermer-creation" aria-label="Fermer">×</button>
+            </div>
+            <form id="form-creation-quiz" method="POST" action="{{ url_for('creer_quizz') }}">
+                <p class="aide-formulaire">1 à 20 questions, 2 à 6 réponses par question. Un quiz privé reçoit automatiquement un code de partage de 6 caractères.</p>
+
+                {# Informations générales du quiz (table quizz) #}
+                <label for="titre-quiz">Titre</label>
+                <input type="text" id="titre-quiz" name="title" maxlength="100" required>
+
+                <label for="description-quiz">Description</label>
+                <textarea id="description-quiz" name="description" maxlength="300" rows="3"></textarea>
+
+                <label for="subject-quiz">Sujet</label>
+                <input type="text" id="subject-quiz" name="subject" maxlength="100" required>
+
+                <label for="visibilite-quiz">Visibilité</label>
+                <select id="visibilite-quiz" name="is_public" required>
+                    <option value="1">Public — visible par tous</option>
+                    <option value="0">Privé — accès avec un code de partage</option>
+                </select>
+
+                <label for="difficulty-quiz">Difficulté</label>
+                <select id="difficulty-quiz" name="difficulty" required>
+                    <option value="">Choisir une difficulté</option>
+                    <option value="Facile">Facile</option>
+                    <option value="Moyen">Moyen</option>
+                    <option value="Difficile">Difficile</option>
+                </select>
+
+                <label for="timer-quiz">Minuteur (secondes)</label>
+                <input type="number" id="timer-quiz" name="timer" min="10" max="3600" value="120" required>
+
+                {# Liste des questions : la première est affichée d'office, les autres sont ajoutées en JS #}
+                <div id="questions-quiz">
+                    <fieldset class="question-a-creer">
+                        <legend>Question 1</legend>
+                        <label>Question
+                            <input type="text" name="questions[0][question]" data-field="question" required>
+                        </label>
+                        {# Chaque bonne réponse vaut 1 point : le score compte les bonnes réponses #}
+                        <input type="hidden" name="questions[0][award]" data-field="award" value="1">
+                        <div class="answers-for-question">
+                            <p class="label-reponses">Réponses (2 à 6) — cochez la bonne réponse</p>
+                            {# Chaque réponse : bouton radio "bonne réponse" (une seule par question), texte, bouton de suppression #}
+                            <div class="answer-option">
+                                <input type="radio" name="questions[0][correct]" value="0" data-correct-answer aria-label="Marquer la réponse 1 comme correcte" required>
+                                <input type="text" name="questions[0][answers][0][answer]" data-answer aria-label="Réponse 1" placeholder="Réponse 1" required>
+                                <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 1" hidden>×</button>
+                            </div>
+                            <div class="answer-option">
+                                <input type="radio" name="questions[0][correct]" value="1" data-correct-answer aria-label="Marquer la réponse 2 comme correcte" required>
+                                <input type="text" name="questions[0][answers][1][answer]" data-answer aria-label="Réponse 2" placeholder="Réponse 2" required>
+                                <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 2" hidden>×</button>
+                            </div>
+                        </div>
+                        <button type="button" class="ajouter-reponse bouton-secondaire">Ajouter une réponse</button>
+                        <button type="button" class="supprimer-question bouton-danger" hidden>Supprimer cette question</button>
+                    </fieldset>
+                </div>
+
+                <button type="button" id="ajouter-question" class="bouton-secondaire">Ajouter une question</button>
+                <button type="submit">Créer le quiz</button>
+                {# Zone de message lue par les lecteurs d'écran (aria-live) #}
+                <p id="quiz-form-status" class="aide-formulaire" role="status" aria-live="polite"></p>
+            </form>
+        </dialog>
+    {% endif %}
+
+    {# Modèles invisibles copiés par create-quiz.js pour ajouter une question ou une réponse #}
+    <template id="modele-question">
+        <fieldset class="question-a-creer">
+            <legend>Question</legend>
+            <label>Question
+                <input type="text" data-field="question" required>
+            </label>
+            {# Chaque bonne réponse vaut 1 point : le score compte les bonnes réponses #}
+            <input type="hidden" data-field="award" value="1">
+            <div class="answers-for-question">
+                <p class="label-reponses">Réponses (2 à 6) — cochez la bonne réponse</p>
+                <div class="answer-option">
+                    <input type="radio" data-correct-answer required>
+                    <input type="text" data-answer aria-label="Réponse 1" placeholder="Réponse 1" required>
+                    <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 1" hidden>×</button>
+                </div>
+                <div class="answer-option">
+                    <input type="radio" data-correct-answer required>
+                    <input type="text" data-answer aria-label="Réponse 2" placeholder="Réponse 2" required>
+                    <button type="button" class="supprimer-reponse" aria-label="Supprimer la réponse 2" hidden>×</button>
+                </div>
+            </div>
+            <button type="button" class="ajouter-reponse bouton-secondaire">Ajouter une réponse</button>
+            <button type="button" class="supprimer-question bouton-danger">Supprimer cette question</button>
+        </fieldset>
+    </template>
+    <template id="modele-reponse">
+        <div class="answer-option">
+            <input type="radio" data-correct-answer required>
+            <input type="text" data-answer required>
+            <button type="button" class="supprimer-reponse" aria-label="Supprimer cette réponse">×</button>
+        </div>
+    </template>
+</main>
+{# Le script de création n'est chargé que si le formulaire est présent #}
+{% if utilisateur %}
+    <script src="{{ url_for('static', filename='js/create-quiz.js') }}"></script>
+    <script>
+        // Fenêtre « Créer un quiz » : s'ouvre avec la tuile, se ferme avec ×, Échap ou un clic à côté.
+        // Fermer ne vide pas le formulaire : on retrouve ce qu'on avait écrit en la rouvrant.
+        const fenetreCreation = document.getElementById("creation-quiz");
+        document.getElementById("ouvrir-creation").addEventListener("click", () => fenetreCreation.showModal());
+        document.getElementById("fermer-creation").addEventListener("click", () => fenetreCreation.close());
+        fenetreCreation.addEventListener("click", (event) => {
+            if (event.target === fenetreCreation) fenetreCreation.close();
+        });
+    </script>
+{% endif %}
+{% endblock %}
