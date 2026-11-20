@@ -151,9 +151,8 @@
                         <label>Question
                             <input type="text" name="questions[0][question]" data-field="question" required>
                         </label>
-                        <label>Points attribués
-                            <input type="number" name="questions[0][award]" data-field="award" min="0" value="1" required>
-                        </label>
+                        {# Chaque bonne réponse vaut 1 point : le score compte les bonnes réponses #}
+                        <input type="hidden" name="questions[0][award]" data-field="award" value="1">
                         <div class="answers-for-question">
                             <p class="label-reponses">Réponses (2 à 6) — cochez la bonne réponse</p>
                             {# Chaque réponse : bouton radio "bonne réponse" (une seule par question), texte, bouton de suppression #}
@@ -188,9 +187,8 @@
             <label>Question
                 <input type="text" data-field="question" required>
             </label>
-            <label>Points attribués
-                <input type="number" data-field="award" min="0" value="1" required>
-            </label>
+            {# Chaque bonne réponse vaut 1 point : le score compte les bonnes réponses #}
+            <input type="hidden" data-field="award" value="1">
             <div class="answers-for-question">
                 <p class="label-reponses">Réponses (2 à 6) — cochez la bonne réponse</p>
                 <div class="answer-option">
